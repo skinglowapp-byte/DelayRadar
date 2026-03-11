@@ -1,0 +1,2 @@
+ALTER TABLE "Shop"
+ADD COLUMN "noMovementThresholdHours" INTEGER NOT NULL DEFAULT 72;

@@ -1,0 +1,71 @@
+{
+  "name": "delayradar",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "prisma generate && react-router build",
+    "dev": "shopify app dev",
+    "start": "react-router-serve ./build/server/index.js",
+    "setup": "prisma generate && prisma migrate deploy",
+    "lint": "eslint .",
+    "typecheck": "react-router typegen && tsc --noEmit",
+    "config:link": "shopify app config link",
+    "config:use": "shopify app config use",
+    "generate": "shopify app generate",
+    "deploy": "shopify app deploy",
+    "env": "shopify app env",
+    "db:generate": "prisma generate",
+    "db:deploy": "prisma migrate deploy",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:seed": "node --env-file=.env --import tsx prisma/seed.ts",
+    "worker": "tsx src/worker/run.ts",
+    "shopify": "shopify"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.16.3",
+    "@react-router/dev": "^7.12.0",
+    "@react-router/node": "^7.12.0",
+    "@react-router/serve": "^7.12.0",
+    "@shopify/app-bridge-react": "^4.2.4",
+    "@shopify/shopify-app-react-router": "^1.1.0",
+    "@shopify/shopify-app-session-storage-prisma": "^8.0.0",
+    "@vercel/react-router": "^1.0.0",
+    "isbot": "^5.1.31",
+    "jose": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-router": "^7.12.0",
+    "zod": "latest"
+  },
+  "devDependencies": {
+    "@shopify/api-codegen-preset": "^1.2.0",
+    "@shopify/polaris-types": "^1.0.1",
+    "@types/eslint": "^9.6.1",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
+    "eslint": "latest",
+    "eslint-import-resolver-typescript": "^3.10.1",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "graphql-config": "^5.1.1",
+    "prettier": "^3.6.2",
+    "prisma": "^6.0.0",
+    "tsx": "latest",
+    "typescript": "latest",
+    "vite": "^6.3.6",
+    "vite-tsconfig-paths": "^5.1.4"
+  },
+  "trustedDependencies": [
+    "@shopify/plugin-cloudflare"
+  ],
+  "overrides": {
+    "p-map": "^4.0.0"
+  }
+}

@@ -1,0 +1,311 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Session {
+  id                  String    @id
+  shop                String
+  state               String
+  isOnline            Boolean   @default(false)
+  scope               String?
+  expires             DateTime?
+  accessToken         String
+  userId              BigInt?
+  firstName           String?
+  lastName            String?
+  email               String?
+  accountOwner        Boolean   @default(false)
+  locale              String?
+  collaborator        Boolean?  @default(false)
+  emailVerified       Boolean?  @default(false)
+  refreshToken        String?
+  refreshTokenExpires DateTime?
+}
+
+model Shop {
+  id                 String            @id @default(cuid())
+  domain             String            @unique
+  shopName           String?
+  email              String?
+  timezone           String?           @default("America/New_York")
+  currencyCode       String?
+  scopes             String            @default("")
+  offlineAccessToken String?
+  isInstalled        Boolean           @default(false)
+  installedAt        DateTime?
+  uninstalledAt      DateTime?
+  lastSyncedAt       DateTime?
+  noMovementThresholdHours Int         @default(72)
+  lostInTransitThresholdHours Int     @default(168)
+  priorityOrderValueThresholdCents Int @default(15000)
+  vipTagPattern      String            @default("vip")
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  shipments          Shipment[]
+  templates          MessageTemplate[]
+  exceptionRules     ExceptionRule[]
+  slackDestination   SlackDestination?
+  notifications      NotificationLog[]
+  inboundWebhooks    InboundWebhook[]
+  queueJobs          QueueJob[]
+}
+
+model Shipment {
+  id                  String           @id @default(cuid())
+  shopId              String
+  shopifyOrderId      String?
+  shopifyOrderName    String?
+  shopifyFulfillmentId String?
+  trackingNumber      String
+  trackingCarrier     String?
+  trackingProvider    TrackingProvider @default(EASYPOST)
+  trackingProviderId  String?          @unique
+  customerName        String?
+  customerEmail       String?
+  customerPhone       String?
+  orderCreatedAt      DateTime?
+  orderValueCents     Int?
+  orderTags           String?
+  shippingMethodLabel String?
+  promisedDeliveryDate DateTime?
+  latestStatus        ShipmentStatus   @default(PENDING)
+  latestExceptionType ExceptionType?
+  latestCheckpointAt  DateTime?
+  deliveredAt         DateTime?
+  riskScore           Int              @default(0)
+  actionRequired      Boolean          @default(false)
+  lastNotifiedAt      DateTime?
+  workflowState       WorkflowState    @default(OPEN)
+  assignedTo          String?
+  reviewedAt          DateTime?
+  snoozedUntil        DateTime?
+  resolvedAt          DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  shop                Shop             @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  events              StatusEvent[]
+  notifications       NotificationLog[]
+  jobs                QueueJob[]
+  notes               ShipmentNote[]
+
+  @@unique([shopId, trackingNumber])
+  @@index([shopifyFulfillmentId])
+  @@index([shopId, latestStatus])
+  @@index([shopId, latestExceptionType])
+  @@index([shopId, workflowState])
+}
+
+model StatusEvent {
+  id               String         @id @default(cuid())
+  shipmentId       String
+  providerEventId  String?        @unique
+  normalizedStatus ShipmentStatus
+  exceptionType    ExceptionType?
+  message          String?
+  actionRequired   Boolean        @default(false)
+  raw              Json
+  occurredAt       DateTime
+  receivedAt       DateTime       @default(now())
+  shipment         Shipment       @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId, occurredAt])
+}
+
+model MessageTemplate {
+  id          String              @id @default(cuid())
+  shopId      String
+  name        String
+  channel     NotificationChannel
+  triggerType ExceptionType
+  subject     String?
+  body        String
+  active      Boolean             @default(true)
+  isDefault   Boolean             @default(false)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  shop        Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  rules       ExceptionRule[]
+  logs        NotificationLog[]
+
+  @@unique([shopId, channel, triggerType])
+}
+
+model ExceptionRule {
+  id                     String              @id @default(cuid())
+  shopId                 String
+  templateId             String?
+  exceptionType          ExceptionType
+  channel                NotificationChannel
+  active                 Boolean             @default(true)
+  minRiskScore           Int                 @default(20)
+  onlyWhenActionRequired Boolean             @default(false)
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  shop                   Shop                @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  template               MessageTemplate?    @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@unique([shopId, exceptionType, channel])
+}
+
+model SlackDestination {
+  id                 String   @id @default(cuid())
+  shopId             String   @unique
+  webhookUrl         String
+  channelLabel       String?
+  dailyDigestHour    Int      @default(9)
+  notifyHighRiskOnly Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  shop               Shop     @relation(fields: [shopId], references: [id], onDelete: Cascade)
+}
+
+model NotificationLog {
+  id                String                     @id @default(cuid())
+  shopId            String
+  shipmentId        String?
+  templateId        String?
+  channel           NotificationChannel
+  target            String
+  status            NotificationDeliveryStatus @default(PENDING)
+  subject           String?
+  body              String
+  externalMessageId String?
+  errorMessage      String?
+  sentAt            DateTime?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  shop              Shop                       @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  shipment          Shipment?                  @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+  template          MessageTemplate?           @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@index([shopId, createdAt])
+  @@index([shipmentId, channel, status])
+}
+
+model InboundWebhook {
+  id             String           @id @default(cuid())
+  shopId         String?
+  source         WebhookSource
+  topic          String
+  externalId     String?
+  idempotencyKey String?          @unique
+  shopDomain     String?
+  headers        Json
+  payload        Json
+  status         ProcessingStatus @default(PENDING)
+  errorMessage   String?
+  retryCount     Int              @default(0)
+  receivedAt     DateTime         @default(now())
+  processedAt    DateTime?
+  shop           Shop?            @relation(fields: [shopId], references: [id], onDelete: SetNull)
+
+  @@index([source, status, receivedAt])
+}
+
+model QueueJob {
+  id          String     @id @default(cuid())
+  shopId      String?
+  shipmentId  String?
+  type        JobType
+  status      JobStatus  @default(PENDING)
+  payload     Json
+  attempts    Int        @default(0)
+  availableAt DateTime   @default(now())
+  lockedAt    DateTime?
+  processedAt DateTime?
+  lastError   String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  shop        Shop?      @relation(fields: [shopId], references: [id], onDelete: SetNull)
+  shipment    Shipment?  @relation(fields: [shipmentId], references: [id], onDelete: SetNull)
+
+  @@index([status, availableAt])
+  @@index([type, status])
+  @@index([shopId, type, status])
+}
+
+model ShipmentNote {
+  id         String   @id @default(cuid())
+  shipmentId String
+  author     String
+  body       String
+  createdAt  DateTime @default(now())
+  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+
+  @@index([shipmentId, createdAt])
+}
+
+enum WorkflowState {
+  OPEN
+  SNOOZED
+  RESOLVED
+}
+
+enum ShipmentStatus {
+  PENDING
+  IN_TRANSIT
+  DELAYED
+  EXCEPTION
+  ACTION_REQUIRED
+  AVAILABLE_FOR_PICKUP
+  DELIVERED
+  LOST
+}
+
+enum ExceptionType {
+  DELAYED
+  FAILED_DELIVERY
+  ADDRESS_ISSUE
+  AVAILABLE_FOR_PICKUP
+  LOST_IN_TRANSIT
+  RETURN_TO_SENDER
+  OTHER
+}
+
+enum NotificationChannel {
+  EMAIL
+  SMS
+  SLACK
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum WebhookSource {
+  SHOPIFY
+  EASYPOST
+}
+
+enum ProcessingStatus {
+  PENDING
+  PROCESSED
+  FAILED
+}
+
+enum JobType {
+  BACKFILL_SHIPMENTS
+  CREATE_TRACKER
+  DELIVER_EXCEPTION_NOTIFICATION
+  SEND_DAILY_DIGEST
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum TrackingProvider {
+  EASYPOST
+}

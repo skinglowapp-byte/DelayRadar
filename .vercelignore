@@ -1,0 +1,8 @@
+.env
+.env.local
+.env.development
+.env.production
+.shopify
+.neon
+node_modules
+.next

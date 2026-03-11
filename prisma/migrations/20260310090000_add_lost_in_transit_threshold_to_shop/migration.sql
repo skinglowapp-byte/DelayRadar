@@ -1,0 +1,2 @@
+ALTER TABLE "Shop"
+ADD COLUMN "lostInTransitThresholdHours" INTEGER NOT NULL DEFAULT 168;
