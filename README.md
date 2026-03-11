@@ -4,7 +4,7 @@ DelayRadar is an embedded Shopify app for delivery exception monitoring and proa
 
 ## Stack
 
-- Next.js App Router with TypeScript
+- Shopify React Router template with React Router 7, Vite, and TypeScript
 - Prisma + Postgres
 - Shopify OAuth and webhook ingestion
 - EasyPost tracking-first integration
