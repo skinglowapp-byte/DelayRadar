@@ -1057,16 +1057,22 @@ export function DelayRadarApp({
   async function fetchBootstrap(shop: string, retryIfEmbedded = true) {
     let payload = await readJson<AppBootstrap>(buildBootstrapPath(shop));
 
+    // When embedded in Shopify admin, authenticate.admin() may have just
+    // completed the OAuth flow and the afterAuth hook needs a moment to
+    // persist the shop record. Retry a few times before giving up.
     if (
       retryIfEmbedded &&
       payload.mode === "install" &&
       shop &&
       initialHost
     ) {
-      await new Promise((resolve) => {
-        window.setTimeout(resolve, 500);
-      });
-      payload = await readJson<AppBootstrap>(buildBootstrapPath(shop));
+      for (let attempt = 0; attempt < 4; attempt++) {
+        await new Promise((resolve) => {
+          window.setTimeout(resolve, 750 * (attempt + 1));
+        });
+        payload = await readJson<AppBootstrap>(buildBootstrapPath(shop));
+        if (payload.mode !== "install") break;
+      }
     }
 
     return payload;
@@ -1677,7 +1683,7 @@ export function DelayRadarApp({
                 <form
                   action="/auth/login"
                   method="POST"
-                  target="_top"
+                  target={initialHost ? "_self" : "_top"}
                   className="install-form"
                 >
                   <input
