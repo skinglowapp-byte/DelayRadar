@@ -1683,7 +1683,7 @@ export function DelayRadarApp({
                 <form
                   action="/auth/login"
                   method="POST"
-                  target={initialHost ? "_self" : "_top"}
+                  target="_top"
                   className="install-form"
                 >
                   <input

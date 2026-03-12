@@ -29,10 +29,13 @@ const shopify = shopifyApp({
   },
   hooks: {
     afterAuth: async ({ session }) => {
-      if (session.isOnline) {
+      if (!session.accessToken) {
         return;
       }
 
+      // For online sessions, still ensure the Shop record exists so the
+      // bootstrap API doesn't return "install" mode while waiting for the
+      // offline token exchange to complete.
       const existingShop = prisma
         ? await prisma.shop.findUnique({
             where: { domain: session.shop },
@@ -43,10 +46,6 @@ const shopify = shopifyApp({
           })
         : null;
 
-      if (!session.accessToken) {
-        return;
-      }
-
       const installedShop = await upsertInstalledShop({
         shop: session.shop,
         accessToken: session.accessToken,
@@ -55,7 +54,8 @@ const shopify = shopifyApp({
 
       await ensureDefaultAutomation(installedShop.id);
 
-      if (!existingShop?.isInstalled) {
+      // Only backfill on the first install (not on every online token refresh).
+      if (!existingShop?.isInstalled && !session.isOnline) {
         await enqueueJob({
           shopId: installedShop.id,
           type: "BACKFILL_SHIPMENTS",
