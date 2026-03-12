@@ -6,14 +6,14 @@ handle = "delayradar"
 
 [build]
 automatically_update_urls_on_dev = true
-include_config_on_deploy = true
 
 [access_scopes]
 scopes = "read_orders,read_fulfillments"
 
 [auth]
 redirect_urls = [
-  "https://delayradar.vercel.app/auth/callback"
+  "https://delayradar.vercel.app/auth/callback",
+  "https://delayradar.vercel.app/api/auth/callback"
 ]
 
 [webhooks]

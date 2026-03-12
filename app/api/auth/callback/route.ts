@@ -63,7 +63,7 @@ export async function GET(request: Request) {
       } satisfies Prisma.InputJsonObject,
     });
 
-    const redirectUrl = new URL(getAppUrl());
+    const redirectUrl = new URL("/app", getAppUrl());
     redirectUrl.searchParams.set("shop", shop);
 
     if (host) {

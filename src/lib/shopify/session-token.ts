@@ -72,12 +72,20 @@ export async function resolveShopFromRequest(request: Request) {
     }
   }
 
+  // In development, also trust the cookie fallback.
   if (process.env.NODE_ENV !== "production") {
     if (shopFromQuery) {
       return shopFromQuery;
     }
 
     return normalizeShopDomain(getCookie(request, "delayradar_shop"));
+  }
+
+  // In production, allow the shop query param as a read-only fallback
+  // when App Bridge hasn't initialized yet (e.g. first load in embedded iframe).
+  // This is safe for read-only bootstrap; write operations should still require a JWT.
+  if (shopFromQuery) {
+    return shopFromQuery;
   }
 
   return null;
