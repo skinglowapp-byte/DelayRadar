@@ -2,7 +2,7 @@ import { JobType, type Prisma } from "@prisma/client";
 import { NextResponse } from "@/src/lib/next-response";
 
 import { ensureDefaultAutomation } from "@/src/lib/data/defaults";
-import { getAppUrl } from "@/src/lib/env";
+import { getAppUrl, getShopifyApiKey } from "@/src/lib/env";
 import { enqueueJob } from "@/src/lib/jobs";
 import {
   exchangeCodeForOfflineToken,
@@ -63,9 +63,16 @@ export async function GET(request: Request) {
       } satisfies Prisma.InputJsonObject,
     });
 
-    const redirectUrl = new URL("/app", getAppUrl());
-    redirectUrl.searchParams.set("shop", shop);
+    // Redirect back into the Shopify admin so the app stays embedded
+    // in the iframe instead of navigating to the raw Vercel URL.
+    const apiKey = getShopifyApiKey();
+    const redirectUrl = host
+      ? new URL(
+          `https://${shop}/admin/apps/${apiKey}`,
+        )
+      : new URL("/app", getAppUrl());
 
+    redirectUrl.searchParams.set("shop", shop);
     if (host) {
       redirectUrl.searchParams.set("host", host);
     }
