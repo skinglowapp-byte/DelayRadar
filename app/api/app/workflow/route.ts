@@ -159,22 +159,23 @@ export async function POST(request: Request) {
         const recLabel = body.recommendationLabel?.trim() || "Recommendation accepted";
         const recAction = body.recommendationAction?.trim() || "unknown";
 
-        await prisma.shipmentNote.create({
-          data: {
-            shipmentId: shipment.id,
-            author: "DelayRadar",
-            body: `Accepted recommendation: ${recLabel} (action: ${recAction})`,
-          },
-        });
-
-        await prisma.shipment.update({
-          where: { id: shipment.id },
-          data: {
-            workflowState: WorkflowState.RESOLVED,
-            resolvedAt: new Date(),
-            snoozedUntil: null,
-          },
-        });
+        await prisma.$transaction([
+          prisma.shipmentNote.create({
+            data: {
+              shipmentId: shipment.id,
+              author: "DelayRadar",
+              body: `Accepted recommendation: ${recLabel} (action: ${recAction})`,
+            },
+          }),
+          prisma.shipment.update({
+            where: { id: shipment.id },
+            data: {
+              workflowState: WorkflowState.RESOLVED,
+              resolvedAt: new Date(),
+              snoozedUntil: null,
+            },
+          }),
+        ]);
 
         return NextResponse.json({
           ok: true,

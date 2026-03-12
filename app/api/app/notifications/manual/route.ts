@@ -91,32 +91,35 @@ export async function POST(request: Request) {
         htmlBody: toHtmlBody(rendered.body),
       });
 
-      const notification = await prisma.notificationLog.create({
-        data: {
-          shopId: shop.id,
-          shipmentId: shipment.id,
-          templateId: template.id,
-          channel: NotificationChannel.EMAIL,
-          target: shipment.customerEmail,
-          status:
-            delivery.status === "sent"
-              ? NotificationDeliveryStatus.SENT
-              : NotificationDeliveryStatus.SKIPPED,
-          subject: rendered.subject,
-          body: rendered.body,
-          externalMessageId: delivery.externalMessageId,
-          sentAt: delivery.status === "sent" ? new Date() : null,
-        },
-      });
-
-      if (delivery.status === "sent") {
-        await prisma.shipment.update({
-          where: { id: shipment.id },
+      const now = new Date();
+      const notification = await prisma.$transaction(async (tx) => {
+        const log = await tx.notificationLog.create({
           data: {
-            lastNotifiedAt: new Date(),
+            shopId: shop.id,
+            shipmentId: shipment.id,
+            templateId: template.id,
+            channel: NotificationChannel.EMAIL,
+            target: shipment.customerEmail,
+            status:
+              delivery.status === "sent"
+                ? NotificationDeliveryStatus.SENT
+                : NotificationDeliveryStatus.SKIPPED,
+            subject: rendered.subject,
+            body: rendered.body,
+            externalMessageId: delivery.externalMessageId,
+            sentAt: delivery.status === "sent" ? now : null,
           },
         });
-      }
+
+        if (delivery.status === "sent") {
+          await tx.shipment.update({
+            where: { id: shipment.id },
+            data: { lastNotifiedAt: now },
+          });
+        }
+
+        return log;
+      });
 
       return NextResponse.json({
         ok: true,

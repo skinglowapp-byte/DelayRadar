@@ -52,52 +52,56 @@ export async function POST(request: Request) {
       );
     }
 
-    const template = await prisma.messageTemplate.upsert({
-      where: {
-        shopId_channel_triggerType: {
+    const template = await prisma.$transaction(async (tx) => {
+      const tpl = await tx.messageTemplate.upsert({
+        where: {
+          shopId_channel_triggerType: {
+            shopId: shop.id,
+            channel: body.channel,
+            triggerType: body.triggerType as ExceptionType,
+          },
+        },
+        update: {
+          name: body.name,
+          subject: body.subject,
+          body: body.body,
+          active: body.active,
+        },
+        create: {
           shopId: shop.id,
+          name: body.name,
           channel: body.channel,
           triggerType: body.triggerType as ExceptionType,
+          subject: body.subject,
+          body: body.body,
+          active: body.active,
         },
-      },
-      update: {
-        name: body.name,
-        subject: body.subject,
-        body: body.body,
-        active: body.active,
-      },
-      create: {
-        shopId: shop.id,
-        name: body.name,
-        channel: body.channel,
-        triggerType: body.triggerType as ExceptionType,
-        subject: body.subject,
-        body: body.body,
-        active: body.active,
-      },
-    });
+      });
 
-    await prisma.exceptionRule.upsert({
-      where: {
-        shopId_exceptionType_channel: {
+      await tx.exceptionRule.upsert({
+        where: {
+          shopId_exceptionType_channel: {
+            shopId: shop.id,
+            exceptionType: body.triggerType as ExceptionType,
+            channel: body.channel,
+          },
+        },
+        update: {
+          templateId: tpl.id,
+          active: body.active,
+          onlyWhenActionRequired: isActionNeededTriggerType(body.triggerType),
+        },
+        create: {
           shopId: shop.id,
           exceptionType: body.triggerType as ExceptionType,
           channel: body.channel,
+          active: body.active,
+          templateId: tpl.id,
+          onlyWhenActionRequired: isActionNeededTriggerType(body.triggerType),
         },
-      },
-      update: {
-        templateId: template.id,
-        active: body.active,
-        onlyWhenActionRequired: isActionNeededTriggerType(body.triggerType),
-      },
-      create: {
-        shopId: shop.id,
-        exceptionType: body.triggerType as ExceptionType,
-        channel: body.channel,
-        active: body.active,
-        templateId: template.id,
-        onlyWhenActionRequired: isActionNeededTriggerType(body.triggerType),
-      },
+      });
+
+      return tpl;
     });
 
     return NextResponse.json({ ok: true, templateId: template.id });

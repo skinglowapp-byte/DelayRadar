@@ -118,9 +118,17 @@ async function handleShopifyWebhook(request: Request) {
   }
 
   const webhookId = request.headers.get("x-shopify-webhook-id");
-  const idempotencyKey = webhookId ? `shopify:${webhookId}` : null;
 
-  if (prisma && idempotencyKey) {
+  if (!webhookId) {
+    return Response.json(
+      { error: "Missing x-shopify-webhook-id header." },
+      { status: 400 },
+    );
+  }
+
+  const idempotencyKey = `shopify:${webhookId}`;
+
+  if (prisma) {
     const duplicate = await prisma.inboundWebhook.findUnique({
       where: { idempotencyKey },
       select: { id: true },
