@@ -12,6 +12,6 @@ export const prisma = hasDatabaseUrl()
   ? globalThis.prismaGlobal ?? new PrismaClient()
   : null;
 
-if (process.env.NODE_ENV !== "production" && prisma) {
+if (prisma) {
   globalThis.prismaGlobal = prisma;
 }

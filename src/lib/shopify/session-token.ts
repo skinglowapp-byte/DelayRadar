@@ -50,7 +50,10 @@ async function verifySessionToken(token: string) {
   return normalizeShopDomain(new URL(destination).hostname);
 }
 
-export async function resolveShopFromRequest(request: Request) {
+export async function resolveShopFromRequest(
+  request: Request,
+  options?: { requireJwt?: boolean },
+) {
   const url = new URL(request.url);
   const shopFromQuery = normalizeShopDomain(url.searchParams.get("shop"));
 
@@ -68,8 +71,14 @@ export async function resolveShopFromRequest(request: Request) {
         return verifiedShop;
       }
     } catch {
-      // Fall through to development-only discovery below.
+      // Fall through to discovery below.
     }
+  }
+
+  // Write operations must use a verified JWT — never trust query params
+  // or cookies for mutations.
+  if (options?.requireJwt) {
+    return null;
   }
 
   // In development, also trust the cookie fallback.
@@ -83,7 +92,6 @@ export async function resolveShopFromRequest(request: Request) {
 
   // In production, allow the shop query param as a read-only fallback
   // when App Bridge hasn't initialized yet (e.g. first load in embedded iframe).
-  // This is safe for read-only bootstrap; write operations should still require a JWT.
   if (shopFromQuery) {
     return shopFromQuery;
   }

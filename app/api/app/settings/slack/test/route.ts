@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
   try {
     const body = slackTestSchema.parse(await request.json());
-    const requestShop = await resolveShopFromRequest(request);
+    const requestShop = await resolveShopFromRequest(request, { requireJwt: true });
     const shopDomain = requestShop ?? body.shop ?? null;
 
     if (!shopDomain) {
