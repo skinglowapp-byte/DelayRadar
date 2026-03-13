@@ -2,8 +2,6 @@ import { PassThrough } from "stream";
 import { createReadableStreamFromReadable } from "@react-router/node";
 import { renderToPipeableStream } from "react-dom/server";
 import { ServerRouter, type EntryContext } from "react-router";
-import { isbot } from "isbot";
-
 import { addDocumentResponseHeaders } from "./shopify.server";
 
 export const streamTimeout = 5000;
@@ -15,8 +13,11 @@ export default async function handleRequest(
   reactRouterContext: EntryContext,
 ) {
   addDocumentResponseHeaders(request, responseHeaders);
-  const userAgent = request.headers.get("user-agent");
-  const callbackName = isbot(userAgent ?? "") ? "onAllReady" : "onShellReady";
+  // Use onAllReady for all requests so that Shopify's App Bridge script tags
+  // (injected via boundary.error's dangerouslySetInnerHTML) appear in the
+  // initial HTML document. Browsers do NOT execute <script> tags set via
+  // innerHTML during React hydration, so streaming would break the auth flow.
+  const callbackName = "onAllReady" as const;
 
   return new Promise((resolve, reject) => {
     const { pipe, abort } = renderToPipeableStream(
