@@ -108,6 +108,28 @@ async function handleShopifyWebhook(request: Request) {
   }
 
   if (
+    normalizedTopic === "customers/data_request" ||
+    normalizedTopic === "customers/redact" ||
+    normalizedTopic === "shop/redact"
+  ) {
+    // Mandatory GDPR compliance webhooks. DelayRadar stores shipment data
+    // keyed by shop, not by individual customer. On shop/redact we clear
+    // the shop record; the other two are acknowledged without further action.
+    if (normalizedTopic === "shop/redact" && prisma) {
+      await prisma.shop.updateMany({
+        where: { domain: shop },
+        data: {
+          isInstalled: false,
+          offlineAccessToken: null,
+          uninstalledAt: new Date(),
+        },
+      });
+    }
+
+    return new Response(null, { status: 200 });
+  }
+
+  if (
     normalizedTopic !== "fulfillments/create" &&
     normalizedTopic !== "fulfillments/update"
   ) {
