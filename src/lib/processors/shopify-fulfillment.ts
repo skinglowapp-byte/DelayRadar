@@ -1,6 +1,7 @@
 import { JobType, TrackingProvider, type Prisma } from "@prisma/client";
 import { z } from "zod";
 
+import { decrypt } from "@/src/lib/crypto";
 import { enqueueJob } from "@/src/lib/jobs";
 import { prisma } from "@/src/lib/prisma";
 import { shopifyAdminGraphql } from "@/src/lib/shopify/admin";
@@ -228,9 +229,11 @@ export async function backfillRecentShipments(shopId: string) {
     throw new Error("Shop is missing an offline access token.");
   }
 
+  const accessToken = decrypt(shop.offlineAccessToken);
+
   const data = await shopifyAdminGraphql<BackfillOrdersResponse>({
     shop: shop.domain,
-    accessToken: shop.offlineAccessToken,
+    accessToken,
     query: `#graphql
       query DelayRadarBackfillOrders {
         orders(first: 25, reverse: true, sortKey: CREATED_AT, query: "fulfillment_status:fulfilled OR fulfillment_status:partial") {

@@ -99,7 +99,7 @@ export async function POST(request: Request) {
             shipmentId: shipment.id,
             templateId: template.id,
             channel: NotificationChannel.EMAIL,
-            target: shipment.customerEmail,
+            target: shipment.customerEmail ?? "",
             status:
               delivery.status === "sent"
                 ? NotificationDeliveryStatus.SENT

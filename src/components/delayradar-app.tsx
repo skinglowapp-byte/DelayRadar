@@ -1640,6 +1640,21 @@ export function DelayRadarApp({
   const templatePreview = previewTemplateDraft(templateDraft);
   const effectiveTestSendTarget = testSendTarget.trim() || data?.shop?.email || "";
 
+  if (!data && !error) {
+    return (
+      <main className="page-shell">
+        <div className="app-frame">
+          <section className="hero-panel" style={{ textAlign: "center", padding: "4rem 1rem" }}>
+            <span className="badge hot">DelayRadar</span>
+            <p className="hero-copy" style={{ marginTop: "1rem" }}>
+              Loading your store data...
+            </p>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="page-shell">
       <div className="app-frame">
@@ -1870,7 +1885,6 @@ export function DelayRadarApp({
                     <>
                       <div className="toolbar">
                         <div>
-                          <span className="eyebrow">Operations view</span>
                           <h2 className="section-title">Exceptions inbox</h2>
                         </div>
                         <span className="pill warn">
@@ -1886,7 +1900,7 @@ export function DelayRadarApp({
                           type="button"
                           onClick={() => setTriageFilter("all")}
                         >
-                          All ages
+                          Any time
                         </button>
                         <button
                           className={cn(

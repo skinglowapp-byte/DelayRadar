@@ -81,7 +81,7 @@ export async function resolveShopFromRequest(
     return null;
   }
 
-  // In development, also trust the cookie fallback.
+  // In development, also trust the cookie fallback for convenience.
   if (process.env.NODE_ENV !== "production") {
     if (shopFromQuery) {
       return shopFromQuery;
@@ -90,10 +90,15 @@ export async function resolveShopFromRequest(
     return normalizeShopDomain(getCookie(request, "delayradar_shop"));
   }
 
-  // In production, allow the shop query param as a read-only fallback
-  // when App Bridge hasn't initialized yet (e.g. first load in embedded iframe).
-  if (shopFromQuery) {
-    return shopFromQuery;
+  // In production, verify the shop cookie set during OAuth callback.
+  // Never trust the bare query param — it's user-controllable and would
+  // allow unauthenticated reads of any shop's data.
+  const shopFromCookie = normalizeShopDomain(
+    getCookie(request, "delayradar_shop"),
+  );
+
+  if (shopFromCookie) {
+    return shopFromCookie;
   }
 
   return null;

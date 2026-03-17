@@ -23,6 +23,7 @@ import { authenticate } from "../shopify.server";
 
 import { prisma } from "@/src/lib/prisma";
 import { ingestShopifyFulfillmentWebhook } from "@/src/lib/processors/shopify-fulfillment";
+import { rateLimit, rateLimitKeyFromRequest } from "@/src/lib/rate-limit";
 
 const getRoutes: Record<string, (request: Request) => Promise<Response>> = {
   "/api/app/bootstrap": getBootstrap,
@@ -107,23 +108,80 @@ async function handleShopifyWebhook(request: Request) {
     return new Response();
   }
 
-  if (
-    normalizedTopic === "customers/data_request" ||
-    normalizedTopic === "customers/redact" ||
-    normalizedTopic === "shop/redact"
-  ) {
-    // Mandatory GDPR compliance webhooks. DelayRadar stores shipment data
-    // keyed by shop, not by individual customer. On shop/redact we clear
-    // the shop record; the other two are acknowledged without further action.
-    if (normalizedTopic === "shop/redact" && prisma) {
-      await prisma.shop.updateMany({
+  if (normalizedTopic === "customers/data_request") {
+    // Acknowledge the data request. DelayRadar stores minimal customer PII
+    // (email, phone, name) on Shipment records keyed by shop, not by a
+    // Shopify customer ID. The merchant can export shipment data on request.
+    return new Response(null, { status: 200 });
+  }
+
+  if (normalizedTopic === "customers/redact") {
+    // GDPR: scrub customer PII from all shipments belonging to this shop
+    // that match the customer's email or phone from the redact payload.
+    if (prisma) {
+      const redactPayload = payload as {
+        customer?: { email?: string; phone?: string };
+        orders_to_redact?: number[];
+      };
+      const customerEmail = redactPayload.customer?.email;
+      const customerPhone = redactPayload.customer?.phone;
+      const orderIds = (redactPayload.orders_to_redact ?? []).map(String);
+
+      const conditions: Array<Record<string, unknown>> = [];
+      if (customerEmail) {
+        conditions.push({ customerEmail });
+      }
+      if (customerPhone) {
+        conditions.push({ customerPhone });
+      }
+      if (orderIds.length > 0) {
+        conditions.push({ shopifyOrderId: { in: orderIds } });
+      }
+
+      if (conditions.length > 0) {
+        const shopRecord = await prisma.shop.findUnique({
+          where: { domain: shop },
+          select: { id: true },
+        });
+
+        if (shopRecord) {
+          await prisma.shipment.updateMany({
+            where: {
+              shopId: shopRecord.id,
+              OR: conditions,
+            },
+            data: {
+              customerName: null,
+              customerEmail: null,
+              customerPhone: null,
+            },
+          });
+        }
+      }
+    }
+
+    return new Response(null, { status: 200 });
+  }
+
+  if (normalizedTopic === "shop/redact") {
+    // GDPR: delete ALL data associated with this shop within 48 hours.
+    if (prisma) {
+      const shopRecord = await prisma.shop.findUnique({
         where: { domain: shop },
-        data: {
-          isInstalled: false,
-          offlineAccessToken: null,
-          uninstalledAt: new Date(),
-        },
+        select: { id: true },
       });
+
+      if (shopRecord) {
+        // Cascade-delete all shop data. The Prisma schema uses onDelete:
+        // Cascade on most relations, so deleting the Shop record removes
+        // shipments, templates, rules, notifications, notes, and jobs.
+        await prisma.shop.delete({ where: { id: shopRecord.id } });
+      }
+    }
+
+    // Also clean up any Shopify sessions for this shop domain.
+    if (session) {
+      await db.session.deleteMany({ where: { shop } });
     }
 
     return new Response(null, { status: 200 });
@@ -210,6 +268,31 @@ async function handleShopifyWebhook(request: Request) {
   }
 }
 
+function enforceRateLimit(request: Request, pathname: string) {
+  // Skip rate limiting for webhooks and cron (they have their own auth).
+  if (pathname.startsWith("/api/webhooks/") || pathname.startsWith("/api/cron/")) {
+    return null;
+  }
+
+  const key = rateLimitKeyFromRequest(request);
+  const result = rateLimit(key, { windowMs: 60_000, max: 40 });
+
+  if (!result.allowed) {
+    return new Response(
+      JSON.stringify({ error: "Too many requests. Please try again shortly." }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(Math.ceil(result.retryAfterMs / 1000)),
+        },
+      },
+    );
+  }
+
+  return null;
+}
+
 export async function loader({ request }: LoaderFunctionArgs) {
   const pathname = new URL(request.url).pathname;
 
@@ -219,6 +302,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
   ) {
     return handleLegacyAuthRoute(request);
   }
+
+  const limited = enforceRateLimit(request, pathname);
+  if (limited) return limited;
 
   const handler = getRoutes[pathname];
 
@@ -235,6 +321,9 @@ export async function action({ request }: ActionFunctionArgs) {
   if (pathname === "/api/webhooks/shopify") {
     return handleShopifyWebhook(request);
   }
+
+  const limited = enforceRateLimit(request, pathname);
+  if (limited) return limited;
 
   const handler = postRoutes[pathname];
 

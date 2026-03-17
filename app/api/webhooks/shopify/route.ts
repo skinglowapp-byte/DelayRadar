@@ -61,6 +61,48 @@ export async function POST(request: Request) {
       });
     }
 
+    if (topic === "customers/data_request") {
+      // Acknowledge — merchant can export shipment data on request.
+    }
+
+    if (topic === "customers/redact" && prisma && shopDomain) {
+      const redactPayload = payload as {
+        customer?: { email?: string; phone?: string };
+        orders_to_redact?: number[];
+      };
+      const customerEmail = redactPayload?.customer?.email;
+      const customerPhone = redactPayload?.customer?.phone;
+      const orderIds = (redactPayload?.orders_to_redact ?? []).map(String);
+
+      const conditions: Array<Record<string, unknown>> = [];
+      if (customerEmail) conditions.push({ customerEmail });
+      if (customerPhone) conditions.push({ customerPhone });
+      if (orderIds.length > 0) conditions.push({ shopifyOrderId: { in: orderIds } });
+
+      if (conditions.length > 0) {
+        const shopRecord = await prisma.shop.findUnique({
+          where: { domain: shopDomain },
+          select: { id: true },
+        });
+        if (shopRecord) {
+          await prisma.shipment.updateMany({
+            where: { shopId: shopRecord.id, OR: conditions },
+            data: { customerName: null, customerEmail: null, customerPhone: null },
+          });
+        }
+      }
+    }
+
+    if (topic === "shop/redact" && prisma && shopDomain) {
+      const shopRecord = await prisma.shop.findUnique({
+        where: { domain: shopDomain },
+        select: { id: true },
+      });
+      if (shopRecord) {
+        await prisma.shop.delete({ where: { id: shopRecord.id } });
+      }
+    }
+
     if (
       (topic === "fulfillments/create" || topic === "fulfillments/update") &&
       shopDomain &&

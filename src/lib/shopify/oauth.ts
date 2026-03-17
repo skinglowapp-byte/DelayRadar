@@ -1,5 +1,6 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 
+import { encrypt } from "@/src/lib/crypto";
 import { getAppUrl, getShopifyApiKey, getShopifyScopes } from "@/src/lib/env";
 import { prisma } from "@/src/lib/prisma";
 import { shopifyAdminGraphql } from "@/src/lib/shopify/admin";
@@ -118,6 +119,8 @@ export async function upsertInstalledShop(input: {
 
   const metadata = await fetchShopMetadata(input.shop, input.accessToken);
 
+  const encryptedToken = encrypt(input.accessToken);
+
   return prisma.shop.upsert({
     where: { domain: input.shop },
     update: {
@@ -125,7 +128,7 @@ export async function upsertInstalledShop(input: {
       email: metadata.email,
       timezone: metadata.ianaTimezone,
       currencyCode: metadata.currencyCode,
-      offlineAccessToken: input.accessToken,
+      offlineAccessToken: encryptedToken,
       scopes: input.scope,
       isInstalled: true,
       installedAt: new Date(),
@@ -137,7 +140,7 @@ export async function upsertInstalledShop(input: {
       email: metadata.email,
       timezone: metadata.ianaTimezone,
       currencyCode: metadata.currencyCode,
-      offlineAccessToken: input.accessToken,
+      offlineAccessToken: encryptedToken,
       scopes: input.scope,
       isInstalled: true,
       installedAt: new Date(),
