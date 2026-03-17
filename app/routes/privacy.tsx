@@ -91,8 +91,18 @@ export default function PrivacyPolicyRoute() {
       <h2>Contact</h2>
       <p>
         For privacy questions or data requests, contact us at{" "}
-        <strong>privacy@delayradar.io</strong>.
+        <a href="mailto:support@delayradar.io">support@delayradar.io</a>.
       </p>
+
+      <h2>Related</h2>
+      <ul>
+        <li>
+          <a href="/terms">Terms of Service</a>
+        </li>
+        <li>
+          <a href="/support">Support</a>
+        </li>
+      </ul>
     </main>
   );
 }
