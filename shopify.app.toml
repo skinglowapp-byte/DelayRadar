@@ -1,6 +1,6 @@
 client_id = "4801d24015598934b6c447731cbac1a6"
 name = "DelayRadar"
-application_url = "https://delayradar.vercel.app"
+application_url = "https://delayradar.io"
 embedded = true
 handle = "delayradar"
 
@@ -12,8 +12,8 @@ scopes = "read_orders,read_fulfillments"
 
 [auth]
 redirect_urls = [
-  "https://delayradar.vercel.app/auth/callback",
-  "https://delayradar.vercel.app/api/auth/callback"
+  "https://delayradar.io/auth/callback",
+  "https://delayradar.io/api/auth/callback"
 ]
 
 [webhooks]
@@ -36,6 +36,6 @@ api_version = "2025-10"
   uri = "/api/webhooks/shopify"
 
 [webhooks.privacy_compliance]
-  customer_data_request_url = "https://delayradar.vercel.app/api/webhooks/shopify"
-  customer_deletion_url = "https://delayradar.vercel.app/api/webhooks/shopify"
-  shop_deletion_url = "https://delayradar.vercel.app/api/webhooks/shopify"
+  customer_data_request_url = "https://delayradar.io/api/webhooks/shopify"
+  customer_deletion_url = "https://delayradar.io/api/webhooks/shopify"
+  shop_deletion_url = "https://delayradar.io/api/webhooks/shopify"
