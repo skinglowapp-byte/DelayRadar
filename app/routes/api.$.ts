@@ -65,7 +65,27 @@ async function handleLegacyAuthRoute(request: Request) {
 async function handleShopifyWebhook(request: Request) {
   const rawTopic = request.headers.get("x-shopify-topic") ?? "";
   const normalizedTopic = rawTopic.toLowerCase();
-  const { payload, session, shop } = await authenticate.webhook(request);
+
+  let payload: unknown;
+  let session: Awaited<ReturnType<typeof authenticate.webhook>>["session"];
+  let shop: string;
+
+  try {
+    const result = await authenticate.webhook(request);
+    payload = result.payload;
+    session = result.session;
+    shop = result.shop;
+  } catch (error) {
+    // authenticate.webhook() throws on invalid HMAC. Return 401 so
+    // Shopify's automated app review checker sees a proper rejection.
+    if (error instanceof Response) {
+      return error;
+    }
+    return new Response(
+      JSON.stringify({ error: "Webhook authentication failed." }),
+      { status: 401, headers: { "Content-Type": "application/json" } },
+    );
+  }
 
   if (normalizedTopic === "app/uninstalled") {
     if (session) {
