@@ -9,6 +9,8 @@ import {
 
 import type {
   AppBootstrap,
+  BackfillStatus,
+  CarrierCoverage,
   CarrierReportRow,
   ExceptionDetail,
   ExceptionRow,
@@ -928,12 +930,87 @@ function ExceptionDetailPanel({
   );
 }
 
-function ShipmentMonitorTable({ rows }: { rows: MonitoredShipmentRow[] }) {
+function CarrierCoverageBanner({ coverage }: { coverage: CarrierCoverage }) {
+  if (!coverage.hasShipments) {
+    return null;
+  }
+
+  const supportedNames = coverage.entries
+    .filter((entry) => entry.supported)
+    .slice(0, 6)
+    .map((entry) => entry.carrier);
+  const unsupportedNames = coverage.unsupportedCarriers.slice(0, 6);
+
+  if (unsupportedNames.length === 0) {
+    return (
+      <div className="callout">
+        <strong>Carrier coverage</strong>
+        <p className="microcopy">
+          Tracking these carriers from your recent fulfillments:{" "}
+          {supportedNames.join(", ")}.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="callout warn">
+      <strong>Some carriers aren&apos;t supported yet</strong>
+      <p className="microcopy">
+        Covered:{" "}
+        {supportedNames.length > 0 ? supportedNames.join(", ") : "—"}.
+      </p>
+      <p className="microcopy">
+        Not yet supported: {unsupportedNames.join(", ")}. Shipments on these
+        carriers will be skipped until we add tracking support — message us
+        and we&apos;ll prioritise it.
+      </p>
+    </div>
+  );
+}
+
+function ShipmentMonitorTable({
+  rows,
+  backfill,
+}: {
+  rows: MonitoredShipmentRow[];
+  backfill?: BackfillStatus;
+}) {
   if (rows.length === 0) {
+    if (backfill?.state === "queued" || backfill?.state === "running") {
+      return (
+        <div className="empty-state">
+          <strong>Scanning your recent fulfillments…</strong>
+          <p className="microcopy">
+            DelayRadar is pulling your latest tracked orders from Shopify. This
+            usually takes 1–2 minutes after install. Refresh in a moment to see
+            your shipments here.
+          </p>
+        </div>
+      );
+    }
+
+    if (backfill?.state === "complete") {
+      return (
+        <div className="empty-state">
+          <strong>You&apos;re all caught up.</strong>
+          <p className="microcopy">
+            We synced your recent fulfillments and didn&apos;t find any shipments
+            with delivery exceptions. New shipments will be monitored
+            automatically — we&apos;ll alert you the moment one runs late.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="empty-state">
-        No monitored shipments yet. Queue a fulfillment sync after install, then
-        run the worker to backfill shipments and create trackers.
+        <strong>No fulfillments synced yet.</strong>
+        <p className="microcopy">
+          Use <em>Queue fulfillment sync</em> above to backfill your recent
+          orders, or fulfil an order with a tracking number — DelayRadar will
+          start monitoring it automatically.
+        </p>
       </div>
     );
   }
@@ -1853,7 +1930,13 @@ export function DelayRadarApp({
                           {data?.recentShipments.length ?? 0} recent shipments
                         </span>
                       </div>
-                      <ShipmentMonitorTable rows={data?.recentShipments ?? []} />
+                      {data?.carrierCoverage ? (
+                        <CarrierCoverageBanner coverage={data.carrierCoverage} />
+                      ) : null}
+                      <ShipmentMonitorTable
+                        rows={data?.recentShipments ?? []}
+                        backfill={data?.backfill}
+                      />
                       <div className="toolbar">
                         <div>
                           <span className="eyebrow">Exception inbox</span>

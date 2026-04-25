@@ -16,5 +16,8 @@ tsconfig.tsbuildinfo
 .react-router
 .cursor/
 .gemini/
+.claude/
 .DS_Store
 .env*.local
+*recovery_code*.txt
+*2FA*.txt

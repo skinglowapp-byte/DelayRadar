@@ -688,6 +688,22 @@ export function getDemoAppData(prefilledShop = ""): AppBootstrap {
       totalCount: 7,
       allComplete: true,
     },
+    backfill: {
+      state: "complete",
+      lastSyncedAt: "8 minutes ago",
+      totalShipments: 24,
+    },
+    carrierCoverage: {
+      entries: [
+        { carrier: "USPS", shipmentCount: 12, supported: true },
+        { carrier: "UPS", shipmentCount: 7, supported: true },
+        { carrier: "FedEx", shipmentCount: 5, supported: true },
+      ],
+      supportedShipmentCount: 24,
+      unsupportedShipmentCount: 0,
+      unsupportedCarriers: [],
+      hasShipments: true,
+    },
     settings: {
       trackingProvider: "EasyPost",
       currencyCode: "USD",
@@ -790,6 +806,18 @@ export function getInstallState(prefilledShop = ""): AppBootstrap {
       completedCount: 0,
       totalCount: 7,
       allComplete: false,
+    },
+    backfill: {
+      state: "idle",
+      lastSyncedAt: null,
+      totalShipments: 0,
+    },
+    carrierCoverage: {
+      entries: [],
+      supportedShipmentCount: 0,
+      unsupportedShipmentCount: 0,
+      unsupportedCarriers: [],
+      hasShipments: false,
     },
     settings: {
       trackingProvider: "EasyPost",

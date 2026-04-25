@@ -197,6 +197,26 @@ export type OnboardingChecklist = {
   allComplete: boolean;
 };
 
+export type BackfillStatus = {
+  state: "idle" | "queued" | "running" | "complete";
+  lastSyncedAt: string | null;
+  totalShipments: number;
+};
+
+export type CarrierCoverageEntry = {
+  carrier: string;
+  shipmentCount: number;
+  supported: boolean;
+};
+
+export type CarrierCoverage = {
+  entries: CarrierCoverageEntry[];
+  supportedShipmentCount: number;
+  unsupportedShipmentCount: number;
+  unsupportedCarriers: string[];
+  hasShipments: boolean;
+};
+
 export type AppBootstrap = {
   mode: "install" | "demo" | "live";
   prefilledShop: string;
@@ -210,6 +230,8 @@ export type AppBootstrap = {
   carrierReport: CarrierReportRow[];
   health: SyncHealthSummary;
   onboarding: OnboardingChecklist;
+  backfill: BackfillStatus;
+  carrierCoverage: CarrierCoverage;
   settings: AppSettingsSummary;
   assumptions: string[];
 };

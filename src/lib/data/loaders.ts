@@ -1,4 +1,6 @@
 import {
+  JobStatus,
+  JobType,
   NotificationChannel,
   NotificationDeliveryStatus,
   ShipmentStatus,
@@ -7,6 +9,8 @@ import {
 import { getDemoAppData, getInstallState } from "@/src/lib/data/mock";
 import type {
   AppBootstrap,
+  BackfillStatus,
+  CarrierCoverage,
   CarrierReportRow,
   ExceptionDetail,
   ExceptionRow,
@@ -23,6 +27,7 @@ import type {
   TriageBucket,
   WorkflowStateLabel,
 } from "@/src/lib/data/types";
+import { isSupportedCarrier } from "@/src/lib/tracking/supported-carriers";
 import { managedEmailRules } from "@/src/lib/notifications/managed-email-rules";
 import { managedSlackRules } from "@/src/lib/notifications/managed-slack-rules";
 import { evaluateShipmentPriority } from "@/src/lib/priority/shipment-priority";
@@ -621,6 +626,94 @@ async function buildSyncHealth(shopId: string, lastSyncedAt: Date | null): Promi
   };
 }
 
+async function buildBackfillStatus(
+  shopId: string,
+  lastSyncedAt: Date | null,
+  totalShipments: number,
+): Promise<BackfillStatus> {
+  if (!prisma) {
+    return {
+      state: lastSyncedAt ? "complete" : "idle",
+      lastSyncedAt: formatRelativeTime(lastSyncedAt),
+      totalShipments,
+    };
+  }
+
+  const activeJob = await prisma.queueJob.findFirst({
+    where: {
+      shopId,
+      type: JobType.BACKFILL_SHIPMENTS,
+      status: { in: [JobStatus.PENDING, JobStatus.PROCESSING] },
+    },
+    orderBy: { createdAt: "desc" },
+    select: { status: true },
+  });
+
+  let state: BackfillStatus["state"];
+  if (activeJob) {
+    state = activeJob.status === JobStatus.PROCESSING ? "running" : "queued";
+  } else if (lastSyncedAt) {
+    state = "complete";
+  } else {
+    state = "idle";
+  }
+
+  return {
+    state,
+    lastSyncedAt: formatRelativeTime(lastSyncedAt),
+    totalShipments,
+  };
+}
+
+async function buildCarrierCoverage(shopId: string): Promise<CarrierCoverage> {
+  if (!prisma) {
+    return {
+      entries: [],
+      supportedShipmentCount: 0,
+      unsupportedShipmentCount: 0,
+      unsupportedCarriers: [],
+      hasShipments: false,
+    };
+  }
+
+  const grouped = await prisma.shipment.groupBy({
+    by: ["trackingCarrier"],
+    where: { shopId },
+    _count: { _all: true },
+  });
+
+  const entries = grouped
+    .map((row) => {
+      const carrier = row.trackingCarrier?.trim() || "Unknown";
+      return {
+        carrier,
+        shipmentCount: row._count._all,
+        supported: isSupportedCarrier(row.trackingCarrier),
+      };
+    })
+    .sort((left, right) => right.shipmentCount - left.shipmentCount);
+
+  let supportedShipmentCount = 0;
+  let unsupportedShipmentCount = 0;
+  const unsupportedCarriers: string[] = [];
+  for (const entry of entries) {
+    if (entry.supported) {
+      supportedShipmentCount += entry.shipmentCount;
+    } else {
+      unsupportedShipmentCount += entry.shipmentCount;
+      unsupportedCarriers.push(entry.carrier);
+    }
+  }
+
+  return {
+    entries,
+    supportedShipmentCount,
+    unsupportedShipmentCount,
+    unsupportedCarriers,
+    hasShipments: entries.length > 0,
+  };
+}
+
 function buildOnboardingChecklist(shop: {
   isInstalled: boolean;
   offlineAccessToken: string | null;
@@ -993,9 +1086,11 @@ export async function getAppBootstrap(
         : "good",
   }));
 
-  const [carrierReport, health] = await Promise.all([
+  const [carrierReport, health, backfill, carrierCoverage] = await Promise.all([
     buildCarrierReport(shop.id),
     buildSyncHealth(shop.id, shop.lastSyncedAt),
+    buildBackfillStatus(shop.id, shop.lastSyncedAt, trackedShipments),
+    buildCarrierCoverage(shop.id),
   ]);
 
   const onboarding = buildOnboardingChecklist(shop, {
@@ -1026,6 +1121,8 @@ export async function getAppBootstrap(
     carrierReport,
     health,
     onboarding,
+    backfill,
+    carrierCoverage,
     settings: {
       trackingProvider: "EasyPost",
       currencyCode,
