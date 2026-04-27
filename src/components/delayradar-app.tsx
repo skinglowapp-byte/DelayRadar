@@ -11,14 +11,9 @@ import type {
   AppBootstrap,
   BackfillStatus,
   CarrierCoverage,
-  CarrierReportRow,
   ExceptionDetail,
   ExceptionRow,
   MonitoredShipmentRow,
-  NoteRow,
-  OnboardingChecklist,
-  RecommendationVerdict,
-  SyncHealthSummary,
   TemplateRow,
   WorkflowStateLabel,
 } from "@/src/lib/data/types";
@@ -2502,7 +2497,7 @@ export function DelayRadarApp({
                         </div>
                         <div className="rule-grid">
                           {(data?.settings.emailRules ?? []).map((rule) => (
-                            <label className="toggle-card" key={rule.triggerType}>
+                            <label className="toggle-card" key={rule.triggerType} aria-label={rule.label}>
                               <input
                                 type="checkbox"
                                 checked={
@@ -2678,7 +2673,7 @@ export function DelayRadarApp({
                         </div>
                         <div className="rule-grid">
                           {(data?.settings.slackRules ?? []).map((rule) => (
-                            <label className="toggle-card" key={rule.triggerType}>
+                            <label className="toggle-card" key={rule.triggerType} aria-label={rule.label}>
                               <input
                                 type="checkbox"
                                 checked={
@@ -2705,7 +2700,7 @@ export function DelayRadarApp({
                             {data?.settings.slackConfigured
                               ? "Slack destination is already configured for this store."
                               : "No Slack destination configured yet."}{" "}
-                            Digest jobs are scheduled against the store's configured digest hour, and the worker still delivers them.
+                            Digest jobs are scheduled against the store&apos;s configured digest hour, and the worker still delivers them.
                           </span>
                           <div className="stack-form">
                             <button

@@ -20,7 +20,6 @@ import type {
   NotificationRuleSummary,
   OnboardingChecklist,
   OnboardingStep,
-  RecommendationVerdict,
   SyncHealthSummary,
   TemplateRow,
   TimelineEntry,

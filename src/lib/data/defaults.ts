@@ -1,8 +1,4 @@
-import {
-  ExceptionType,
-  NotificationChannel,
-  type Prisma,
-} from "@prisma/client";
+import { ExceptionType, NotificationChannel } from "@prisma/client";
 
 import { managedSlackRules } from "@/src/lib/notifications/managed-slack-rules";
 import { prisma } from "@/src/lib/prisma";

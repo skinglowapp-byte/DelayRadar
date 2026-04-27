@@ -18,7 +18,7 @@ export default function TermsOfServiceRoute() {
 
       <h2>1. Acceptance of Terms</h2>
       <p>
-        By installing or using DelayRadar ("the App"), you agree to these Terms
+        By installing or using DelayRadar (&ldquo;the App&rdquo;), you agree to these Terms
         of Service. If you do not agree, please uninstall the App immediately.
       </p>
 
@@ -72,7 +72,7 @@ export default function TermsOfServiceRoute() {
 
       <h2>7. Limitation of Liability</h2>
       <p>
-        DelayRadar is provided "as is" without warranties of any kind. To the
+        DelayRadar is provided &ldquo;as is&rdquo; without warranties of any kind. To the
         maximum extent permitted by law, we shall not be liable for any
         indirect, incidental, special, or consequential damages arising from
         your use of the App, including but not limited to lost revenue, missed

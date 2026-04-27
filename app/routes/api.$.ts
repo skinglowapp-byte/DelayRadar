@@ -1,4 +1,8 @@
-import { ProcessingStatus, WebhookSource } from "@prisma/client";
+import {
+  type InboundWebhook,
+  ProcessingStatus,
+  WebhookSource,
+} from "@prisma/client";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 
 import { GET as getBootstrap } from "../api/app/bootstrap/route";
@@ -62,12 +66,132 @@ async function handleLegacyAuthRoute(request: Request) {
   return Response.redirect(redirectUrl.toString(), 302);
 }
 
+type ShopifyWebhookSession = Awaited<
+  ReturnType<typeof authenticate.webhook>
+>["session"];
+
+async function dispatchShopifyTopic(
+  normalizedTopic: string,
+  ctx: {
+    shop: string;
+    session: ShopifyWebhookSession;
+    payload: unknown;
+  },
+) {
+  const { shop, session, payload } = ctx;
+
+  if (normalizedTopic === "app/uninstalled") {
+    if (session) {
+      await db.session.deleteMany({ where: { shop } });
+    }
+    if (prisma) {
+      await prisma.shop.updateMany({
+        where: { domain: shop },
+        data: {
+          isInstalled: false,
+          offlineAccessToken: null,
+          uninstalledAt: new Date(),
+        },
+      });
+    }
+    return;
+  }
+
+  if (normalizedTopic === "app/scopes_update") {
+    const currentScopes = Array.isArray((payload as { current?: unknown }).current)
+      ? ((payload as { current: string[] }).current ?? []).join(",")
+      : "";
+
+    if (session) {
+      await db.session.updateMany({
+        where: { id: session.id },
+        data: { scope: currentScopes },
+      });
+    }
+    if (prisma && currentScopes) {
+      await prisma.shop.updateMany({
+        where: { domain: shop },
+        data: { scopes: currentScopes },
+      });
+    }
+    return;
+  }
+
+  if (normalizedTopic === "customers/data_request") {
+    // GDPR: log loudly so the merchant can be alerted out-of-band. DelayRadar
+    // stores minimal customer PII (email, phone, name) on Shipment records;
+    // the inboundWebhook row carries the full payload for follow-up export.
+    console.warn(
+      `[gdpr] customers/data_request received for shop=${shop}; awaiting merchant export.`,
+    );
+    return;
+  }
+
+  if (normalizedTopic === "customers/redact") {
+    if (!prisma) return;
+    const redactPayload = payload as {
+      customer?: { email?: string; phone?: string };
+      orders_to_redact?: number[];
+    };
+    const customerEmail = redactPayload.customer?.email;
+    const customerPhone = redactPayload.customer?.phone;
+    const orderIds = (redactPayload.orders_to_redact ?? []).map(String);
+
+    const conditions: Array<Record<string, unknown>> = [];
+    if (customerEmail) conditions.push({ customerEmail });
+    if (customerPhone) conditions.push({ customerPhone });
+    if (orderIds.length > 0) conditions.push({ shopifyOrderId: { in: orderIds } });
+
+    if (conditions.length === 0) return;
+
+    const shopRecord = await prisma.shop.findUnique({
+      where: { domain: shop },
+      select: { id: true },
+    });
+    if (!shopRecord) return;
+
+    await prisma.shipment.updateMany({
+      where: { shopId: shopRecord.id, OR: conditions },
+      data: { customerName: null, customerEmail: null, customerPhone: null },
+    });
+    return;
+  }
+
+  if (normalizedTopic === "shop/redact") {
+    if (prisma) {
+      const shopRecord = await prisma.shop.findUnique({
+        where: { domain: shop },
+        select: { id: true },
+      });
+      if (shopRecord) {
+        // Cascade-delete via onDelete: Cascade on Shop relations.
+        await prisma.shop.delete({ where: { id: shopRecord.id } });
+      }
+    }
+    if (session) {
+      await db.session.deleteMany({ where: { shop } });
+    }
+    return;
+  }
+
+  if (
+    normalizedTopic === "fulfillments/create" ||
+    normalizedTopic === "fulfillments/update"
+  ) {
+    await ingestShopifyFulfillmentWebhook(shop, payload);
+    return;
+  }
+
+  throw new Error(`Unsupported Shopify webhook topic: ${normalizedTopic || "unknown"}.`);
+}
+
 async function handleShopifyWebhook(request: Request) {
   const rawTopic = request.headers.get("x-shopify-topic") ?? "";
   const normalizedTopic = rawTopic.toLowerCase();
+  const webhookId = request.headers.get("x-shopify-webhook-id");
 
   let payload: unknown;
-  let session: Awaited<ReturnType<typeof authenticate.webhook>>["session"];
+  let session: ShopifyWebhookSession;
   let shop: string;
 
   try {
@@ -87,204 +211,72 @@ async function handleShopifyWebhook(request: Request) {
     );
   }
 
-  if (normalizedTopic === "app/uninstalled") {
-    if (session) {
-      await db.session.deleteMany({ where: { shop } });
-    }
+  const idempotencyKey = webhookId ? `shopify:${webhookId}` : null;
 
-    if (prisma) {
-      await prisma.shop.updateMany({
-        where: { domain: shop },
-        data: {
-          isInstalled: false,
-          offlineAccessToken: null,
-          uninstalledAt: new Date(),
-        },
-      });
-    }
+  // Audit log: every authenticated Shopify webhook gets a row, including
+  // GDPR/uninstall topics that previously had no record.
+  let inbound: InboundWebhook | null = null;
 
-    return new Response();
-  }
-
-  if (normalizedTopic === "app/scopes_update") {
-    const currentScopes = Array.isArray((payload as { current?: unknown }).current)
-      ? ((payload as { current: string[] }).current ?? []).join(",")
-      : "";
-
-    if (session) {
-      await db.session.updateMany({
-        where: { id: session.id },
-        data: { scope: currentScopes },
-      });
-    }
-
-    if (prisma && currentScopes) {
-      await prisma.shop.updateMany({
-        where: { domain: shop },
-        data: { scopes: currentScopes },
-      });
-    }
-
-    return new Response();
-  }
-
-  if (normalizedTopic === "customers/data_request") {
-    // Acknowledge the data request. DelayRadar stores minimal customer PII
-    // (email, phone, name) on Shipment records keyed by shop, not by a
-    // Shopify customer ID. The merchant can export shipment data on request.
-    return new Response(null, { status: 200 });
-  }
-
-  if (normalizedTopic === "customers/redact") {
-    // GDPR: scrub customer PII from all shipments belonging to this shop
-    // that match the customer's email or phone from the redact payload.
-    if (prisma) {
-      const redactPayload = payload as {
-        customer?: { email?: string; phone?: string };
-        orders_to_redact?: number[];
-      };
-      const customerEmail = redactPayload.customer?.email;
-      const customerPhone = redactPayload.customer?.phone;
-      const orderIds = (redactPayload.orders_to_redact ?? []).map(String);
-
-      const conditions: Array<Record<string, unknown>> = [];
-      if (customerEmail) {
-        conditions.push({ customerEmail });
-      }
-      if (customerPhone) {
-        conditions.push({ customerPhone });
-      }
-      if (orderIds.length > 0) {
-        conditions.push({ shopifyOrderId: { in: orderIds } });
-      }
-
-      if (conditions.length > 0) {
-        const shopRecord = await prisma.shop.findUnique({
-          where: { domain: shop },
-          select: { id: true },
-        });
-
-        if (shopRecord) {
-          await prisma.shipment.updateMany({
-            where: {
-              shopId: shopRecord.id,
-              OR: conditions,
-            },
-            data: {
-              customerName: null,
-              customerEmail: null,
-              customerPhone: null,
-            },
-          });
-        }
-      }
-    }
-
-    return new Response(null, { status: 200 });
-  }
-
-  if (normalizedTopic === "shop/redact") {
-    // GDPR: delete ALL data associated with this shop within 48 hours.
-    if (prisma) {
-      const shopRecord = await prisma.shop.findUnique({
-        where: { domain: shop },
-        select: { id: true },
-      });
-
-      if (shopRecord) {
-        // Cascade-delete all shop data. The Prisma schema uses onDelete:
-        // Cascade on most relations, so deleting the Shop record removes
-        // shipments, templates, rules, notifications, notes, and jobs.
-        await prisma.shop.delete({ where: { id: shopRecord.id } });
-      }
-    }
-
-    // Also clean up any Shopify sessions for this shop domain.
-    if (session) {
-      await db.session.deleteMany({ where: { shop } });
-    }
-
-    return new Response(null, { status: 200 });
-  }
-
-  if (
-    normalizedTopic !== "fulfillments/create" &&
-    normalizedTopic !== "fulfillments/update"
-  ) {
-    return Response.json(
-      { error: `Unsupported Shopify webhook topic: ${rawTopic || "unknown"}.` },
-      { status: 400 },
-    );
-  }
-
-  const webhookId = request.headers.get("x-shopify-webhook-id");
-
-  if (!webhookId) {
-    return Response.json(
-      { error: "Missing x-shopify-webhook-id header." },
-      { status: 400 },
-    );
-  }
-
-  const idempotencyKey = `shopify:${webhookId}`;
-
-  if (prisma) {
+  if (prisma && idempotencyKey) {
     const duplicate = await prisma.inboundWebhook.findUnique({
       where: { idempotencyKey },
       select: { id: true },
     });
-
-    if (duplicate) {
-      return new Response(null, { status: 200 });
-    }
+    if (duplicate) return new Response(null, { status: 200 });
   }
 
-  const inbound = prisma
-    ? await prisma.inboundWebhook.create({
+  if (prisma) {
+    try {
+      inbound = await prisma.inboundWebhook.create({
         data: {
           source: WebhookSource.SHOPIFY,
           topic: rawTopic || "unknown",
           shopDomain: shop,
           idempotencyKey,
           headers: Object.fromEntries(request.headers.entries()),
-          payload: payload as object,
+          payload: (payload ?? {}) as object,
         },
-      })
-    : null;
+      });
+    } catch (error) {
+      // Concurrent retry: another request created the row first. Treat as duplicate.
+      if (
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        (error as { code?: string }).code === "P2002"
+      ) {
+        return new Response(null, { status: 200 });
+      }
+      throw error;
+    }
+  }
 
   try {
-    await ingestShopifyFulfillmentWebhook(shop, payload);
+    await dispatchShopifyTopic(normalizedTopic, { shop, session, payload });
 
     if (prisma && inbound) {
       await prisma.inboundWebhook.update({
         where: { id: inbound.id },
-        data: {
-          status: ProcessingStatus.PROCESSED,
-          processedAt: new Date(),
-        },
+        data: { status: ProcessingStatus.PROCESSED, processedAt: new Date() },
       });
     }
 
     return new Response(null, { status: 200 });
   } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Webhook processing failed.";
+
     if (prisma && inbound) {
       await prisma.inboundWebhook.update({
         where: { id: inbound.id },
-        data: {
-          status: ProcessingStatus.FAILED,
-          errorMessage:
-            error instanceof Error ? error.message : "Webhook processing failed.",
-        },
+        data: { status: ProcessingStatus.FAILED, errorMessage },
       });
     }
 
-    return Response.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Webhook processing failed.",
-      },
-      { status: 500 },
-    );
+    const status = errorMessage.startsWith("Unsupported Shopify webhook topic")
+      ? 400
+      : 500;
+    return Response.json({ error: errorMessage }, { status });
   }
 }
 

@@ -1,4 +1,4 @@
-import type { AppBootstrap, OnboardingChecklist, RecommendationVerdict, SyncHealthSummary } from "@/src/lib/data/types";
+import type { AppBootstrap } from "@/src/lib/data/types";
 
 export function getDemoAppData(prefilledShop = ""): AppBootstrap {
   return {

@@ -14,15 +14,16 @@ export default function SupportRoute() {
       <h1>Support</h1>
 
       <p>
-        Need help with DelayRadar? We're here for you. Reach out using any of
-        the options below and we'll get back to you as quickly as possible.
+        Need help with DelayRadar? We&apos;re here for you. Reach out using any
+        of the options below and we&apos;ll get back to you as quickly as
+        possible.
       </p>
 
       <h2>Email Support</h2>
       <p>
         Send us an email at{" "}
         <a href="mailto:support@delayradar.io">support@delayradar.io</a> and
-        we'll respond within one business day.
+        we&apos;ll respond within one business day.
       </p>
       <p>When contacting support, please include:</p>
       <ul>
@@ -51,8 +52,8 @@ export default function SupportRoute() {
       <h3>How do I connect Slack?</h3>
       <p>
         In the <strong>Settings</strong> tab, paste your Slack incoming webhook
-        URL. You can use the "Send test" button to verify the connection before
-        enabling exception alerts and daily digests.
+        URL. You can use the &ldquo;Send test&rdquo; button to verify the
+        connection before enabling exception alerts and daily digests.
       </p>
 
       <h3>What tracking providers are supported?</h3>
@@ -66,7 +67,7 @@ export default function SupportRoute() {
       <p>
         You can uninstall DelayRadar from your Shopify admin under{" "}
         <strong>Apps</strong>. Your access token is revoked immediately and all
-        data is deleted upon receiving Shopify's data erasure request.
+        data is deleted upon receiving Shopify&apos;s data erasure request.
       </p>
 
       <h2>Legal</h2>
