@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "prisma generate && react-router build",
+    "build": "prisma generate && prisma migrate deploy && react-router build",
     "dev": "shopify app dev",
     "start": "react-router-serve ./build/server/index.js",
     "setup": "prisma generate && prisma migrate deploy",
