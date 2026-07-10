@@ -422,7 +422,11 @@ function ExceptionTable({
           {rows.map((row) => (
             <tr
               key={row.id}
-              className={cn(!compact && selectedId === row.id && "table-row-active")}
+              className={cn(
+                !compact && selectedId === row.id && "table-row-active",
+                compact && onSelect && "table-row-clickable",
+              )}
+              onClick={compact && onSelect ? () => onSelect(row.id) : undefined}
             >
               <td>
                 {compact || !onSelect ? (
@@ -1944,6 +1948,10 @@ export function DelayRadarApp({
                       <ExceptionTable
                         rows={(data?.exceptionInbox ?? []).slice(0, 6)}
                         compact
+                        onSelect={(id) => {
+                          setSelectedExceptionId(id);
+                          setActiveTab("exceptions");
+                        }}
                         noMovementThresholdHours={
                           data?.settings.noMovementThresholdHours ?? 72
                         }
@@ -2656,6 +2664,11 @@ export function DelayRadarApp({
                               value={digestHour}
                               onChange={(event) => setDigestHour(event.target.value)}
                             />
+                            <span className="helper-text">
+                              Digests are queued for this hour but only sent out
+                              during our twice-daily processing windows, so
+                              delivery can lag by up to several hours.
+                            </span>
                           </label>
                           <label className="field">
                             <span className="field-label">Slack scope</span>

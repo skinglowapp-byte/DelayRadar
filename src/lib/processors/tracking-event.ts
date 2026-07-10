@@ -115,7 +115,7 @@ export async function ingestEasyPostTrackerWebhook(payload: unknown) {
     },
   });
 
-  if (exceptionType) {
+  if (exceptionType && exceptionType !== shipment.latestExceptionType) {
     await enqueueJob({
       shopId: shipment.shopId,
       shipmentId: shipment.id,
