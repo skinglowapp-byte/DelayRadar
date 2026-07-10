@@ -593,10 +593,10 @@ async function buildSyncHealth(shopId: string, lastSyncedAt: Date | null): Promi
   ] = await Promise.all([
     prisma.shipment.count({ where: { shopId } }),
     prisma.shipment.count({ where: { shopId, trackingProviderId: { not: null } } }),
-    prisma.inboundWebhook.count({ where: { receivedAt: { gte: oneDayAgo } } }),
-    prisma.inboundWebhook.count({ where: { status: "FAILED", receivedAt: { gte: oneDayAgo } } }),
-    prisma.queueJob.count({ where: { status: "PENDING" } }),
-    prisma.queueJob.count({ where: { status: "FAILED" } }),
+    prisma.inboundWebhook.count({ where: { shopId, receivedAt: { gte: oneDayAgo } } }),
+    prisma.inboundWebhook.count({ where: { shopId, status: "FAILED", receivedAt: { gte: oneDayAgo } } }),
+    prisma.queueJob.count({ where: { shopId, status: "PENDING" } }),
+    prisma.queueJob.count({ where: { shopId, status: "FAILED" } }),
     prisma.notificationLog.count({ where: { shopId, status: "SENT", createdAt: { gte: oneDayAgo } } }),
     prisma.notificationLog.count({ where: { shopId, status: "FAILED", createdAt: { gte: oneDayAgo } } }),
   ]);

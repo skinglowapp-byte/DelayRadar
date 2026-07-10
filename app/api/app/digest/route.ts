@@ -10,7 +10,6 @@ import { prisma } from "@/src/lib/prisma";
 import { resolveShopFromRequest } from "@/src/lib/shopify/session-token";
 
 const digestSchema = z.object({
-  shop: z.string().optional(),
   force: z.boolean().optional().default(false),
 });
 
@@ -25,7 +24,7 @@ export async function POST(request: Request) {
   try {
     const body = digestSchema.parse(await request.json());
     const requestShop = await resolveShopFromRequest(request, { requireJwt: true });
-    const shopDomain = requestShop ?? body.shop ?? null;
+    const shopDomain = requestShop;
 
     if (!shopDomain) {
       return NextResponse.json({ error: "Shop is required." }, { status: 400 });

@@ -10,7 +10,6 @@ import { prisma } from "@/src/lib/prisma";
 import { resolveShopFromRequest } from "@/src/lib/shopify/session-token";
 
 const slackSchema = z.object({
-  shop: z.string().optional(),
   webhookUrl: z.string().optional().default(""),
   clearWebhook: z.boolean().optional().default(false),
   digestHour: z.number().int().min(0).max(23),
@@ -36,7 +35,7 @@ export async function POST(request: Request) {
   try {
     const body = slackSchema.parse(await request.json());
     const requestShop = await resolveShopFromRequest(request, { requireJwt: true });
-    const shopDomain = requestShop ?? body.shop ?? null;
+    const shopDomain = requestShop;
 
     if (!shopDomain) {
       return NextResponse.json({ error: "Shop is required." }, { status: 400 });

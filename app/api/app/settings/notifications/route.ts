@@ -11,7 +11,6 @@ import { prisma } from "@/src/lib/prisma";
 import { resolveShopFromRequest } from "@/src/lib/shopify/session-token";
 
 const notificationSettingsSchema = z.object({
-  shop: z.string().optional(),
   noMovementThresholdHours: z.number().int().min(24).max(240),
   emailRules: z.array(
     z.object({
@@ -34,7 +33,7 @@ export async function POST(request: Request) {
   try {
     const body = notificationSettingsSchema.parse(await request.json());
     const requestShop = await resolveShopFromRequest(request, { requireJwt: true });
-    const shopDomain = requestShop ?? body.shop ?? null;
+    const shopDomain = requestShop;
 
     if (!shopDomain) {
       return NextResponse.json({ error: "Shop is required." }, { status: 400 });

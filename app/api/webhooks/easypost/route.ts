@@ -17,11 +17,8 @@ export async function POST(request: Request) {
 
   const payload = safeJsonParse<unknown>(rawBody);
   const epPayload = payload as Record<string, unknown> | null;
-  const epResult = epPayload?.result as Record<string, unknown> | undefined;
-  const trackerId = typeof epResult?.id === "string" ? epResult.id : null;
-  const trackerStatus = typeof epResult?.status === "string" ? epResult.status : null;
-  const idempotencyKey =
-    trackerId && trackerStatus ? `easypost:${trackerId}:${trackerStatus}` : null;
+  const eventId = typeof epPayload?.id === "string" ? epPayload.id : null;
+  const idempotencyKey = eventId ? `easypost:${eventId}` : null;
 
   if (!prisma) {
     return new NextResponse(null, { status: 200 });

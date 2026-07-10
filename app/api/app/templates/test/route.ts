@@ -8,7 +8,6 @@ import { resolveShopFromRequest } from "@/src/lib/shopify/session-token";
 import { toHtmlBody } from "@/src/lib/utils";
 
 const templateTestSchema = z.object({
-  shop: z.string().optional(),
   name: z.string().min(2),
   triggerType: z.enum([
     "DELAYED",
@@ -35,7 +34,7 @@ export async function POST(request: Request) {
   try {
     const body = templateTestSchema.parse(await request.json());
     const requestShop = await resolveShopFromRequest(request, { requireJwt: true });
-    const shopDomain = requestShop ?? body.shop ?? null;
+    const shopDomain = requestShop;
 
     if (!shopDomain) {
       return NextResponse.json({ error: "Shop is required." }, { status: 400 });

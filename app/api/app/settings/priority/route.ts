@@ -5,7 +5,6 @@ import { prisma } from "@/src/lib/prisma";
 import { resolveShopFromRequest } from "@/src/lib/shopify/session-token";
 
 const prioritySettingsSchema = z.object({
-  shop: z.string().optional(),
   priorityOrderValueThresholdCents: z.number().int().min(1000).max(5_000_000),
   vipTagPattern: z.string().trim().min(1).max(100),
   lostInTransitThresholdHours: z.number().int().min(48).max(720).optional(),
@@ -22,7 +21,7 @@ export async function POST(request: Request) {
   try {
     const body = prioritySettingsSchema.parse(await request.json());
     const requestShop = await resolveShopFromRequest(request, { requireJwt: true });
-    const shopDomain = requestShop ?? body.shop ?? null;
+    const shopDomain = requestShop;
 
     if (!shopDomain) {
       return NextResponse.json({ error: "Shop is required." }, { status: 400 });

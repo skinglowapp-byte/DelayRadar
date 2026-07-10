@@ -6,7 +6,6 @@ import { prisma } from "@/src/lib/prisma";
 import { resolveShopFromRequest } from "@/src/lib/shopify/session-token";
 
 const workflowSchema = z.object({
-  shop: z.string().optional(),
   shipmentId: z.string().min(1),
   action: z.enum(["assign", "review", "snooze", "resolve", "reopen", "add_note", "accept_recommendation"]),
   assignedTo: z.string().optional(),
@@ -28,7 +27,7 @@ export async function POST(request: Request) {
   try {
     const body = workflowSchema.parse(await request.json());
     const requestShop = await resolveShopFromRequest(request, { requireJwt: true });
-    const shopDomain = requestShop ?? body.shop ?? null;
+    const shopDomain = requestShop;
 
     if (!shopDomain) {
       return NextResponse.json({ error: "Shop is required." }, { status: 400 });

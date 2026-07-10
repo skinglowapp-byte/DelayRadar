@@ -46,16 +46,10 @@ export function rateLimit(
 }
 
 /**
- * Derive a rate-limit key from a request. Uses the shop domain from the
- * query string, falling back to the client IP.
+ * Derive a rate-limit key from a request's client IP. The `shop` query
+ * param is never used here — it's client-controlled and rotating it would
+ * let a caller mint a fresh bucket on every request.
  */
 export function rateLimitKeyFromRequest(request: Request): string {
-  const url = new URL(request.url);
-  const shop = url.searchParams.get("shop");
-
-  if (shop) {
-    return `shop:${shop}`;
-  }
-
   return `ip:${request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"}`;
 }

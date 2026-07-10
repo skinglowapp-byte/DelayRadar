@@ -6,7 +6,6 @@ import { prisma } from "@/src/lib/prisma";
 import { resolveShopFromRequest } from "@/src/lib/shopify/session-token";
 
 const retrySchema = z.object({
-  shop: z.string().optional(),
   jobId: z.string().min(1).optional(),
   retryAllFailed: z.boolean().optional(),
 });
@@ -22,7 +21,7 @@ export async function POST(request: Request) {
   try {
     const body = retrySchema.parse(await request.json());
     const requestShop = await resolveShopFromRequest(request, { requireJwt: true });
-    const shopDomain = requestShop ?? body.shop ?? null;
+    const shopDomain = requestShop;
 
     if (!shopDomain) {
       return NextResponse.json({ error: "Shop is required." }, { status: 400 });
