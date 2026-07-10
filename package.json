@@ -21,6 +21,7 @@
     "db:push": "prisma db push",
     "db:seed": "node --env-file=.env --import tsx prisma/seed.ts",
     "worker": "tsx src/worker/run.ts",
+    "worker:trigger": "bash scripts/trigger-worker.sh",
     "shopify": "shopify"
   },
   "dependencies": {
