@@ -3,7 +3,7 @@ import { NextResponse } from "@/src/lib/next-response";
 import { z } from "zod";
 
 import { prisma } from "@/src/lib/prisma";
-import { resolveShopFromRequest } from "@/src/lib/shopify/session-token";
+import { requireShopDomain, routeErrorResponse } from "@/src/lib/shopify/route-helpers";
 
 const workflowSchema = z.object({
   shipmentId: z.string().min(1),
@@ -26,11 +26,10 @@ export async function POST(request: Request) {
 
   try {
     const body = workflowSchema.parse(await request.json());
-    const requestShop = await resolveShopFromRequest(request, { requireJwt: true });
-    const shopDomain = requestShop;
+    const { shopDomain, response } = await requireShopDomain(request);
 
-    if (!shopDomain) {
-      return NextResponse.json({ error: "Shop is required." }, { status: 400 });
+    if (response) {
+      return response;
     }
 
     const shop = await prisma.shop.findUnique({
@@ -190,16 +189,6 @@ export async function POST(request: Request) {
         );
     }
   } catch (error) {
-    const status = error instanceof z.ZodError ? 400 : 500;
-
-    return NextResponse.json(
-      {
-        error:
-          error instanceof z.ZodError
-            ? error.message
-            : "Workflow action failed.",
-      },
-      { status },
-    );
+    return routeErrorResponse(error, "Workflow action failed.");
   }
 }

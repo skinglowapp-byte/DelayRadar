@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { enqueueJob } from "@/src/lib/jobs";
 import { prisma } from "@/src/lib/prisma";
-import { resolveShopFromRequest } from "@/src/lib/shopify/session-token";
+import { requireShopDomain, routeErrorResponse } from "@/src/lib/shopify/route-helpers";
 
 const syncSchema = z.object({
 });
@@ -18,12 +18,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = syncSchema.parse(await request.json());
-    const requestShop = await resolveShopFromRequest(request, { requireJwt: true });
-    const shopDomain = requestShop;
+    syncSchema.parse(await request.json());
+    const { shopDomain, response } = await requireShopDomain(request);
 
-    if (!shopDomain) {
-      return NextResponse.json({ error: "Shop is required." }, { status: 400 });
+    if (response) {
+      return response;
     }
 
     const shop = await prisma.shop.findUnique({
@@ -47,16 +46,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    const status = error instanceof z.ZodError ? 400 : 500;
-
-    return NextResponse.json(
-      {
-        error:
-          error instanceof z.ZodError
-            ? error.message
-            : "Sync queueing failed.",
-      },
-      { status },
-    );
+    return routeErrorResponse(error, "Sync queueing failed.");
   }
 }

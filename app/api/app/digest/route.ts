@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import { ensureDailyDigestJob } from "@/src/lib/jobs";
 import { prisma } from "@/src/lib/prisma";
-import { resolveShopFromRequest } from "@/src/lib/shopify/session-token";
+import { requireShopDomain, routeErrorResponse } from "@/src/lib/shopify/route-helpers";
 
 const digestSchema = z.object({
   force: z.boolean().optional().default(false),
@@ -23,11 +23,10 @@ export async function POST(request: Request) {
 
   try {
     const body = digestSchema.parse(await request.json());
-    const requestShop = await resolveShopFromRequest(request, { requireJwt: true });
-    const shopDomain = requestShop;
+    const { shopDomain, response } = await requireShopDomain(request);
 
-    if (!shopDomain) {
-      return NextResponse.json({ error: "Shop is required." }, { status: 400 });
+    if (response) {
+      return response;
     }
 
     const shop = await prisma.shop.findUnique({
@@ -90,16 +89,6 @@ export async function POST(request: Request) {
       alreadySentToday: false,
     });
   } catch (error) {
-    const status = error instanceof z.ZodError ? 400 : 500;
-
-    return NextResponse.json(
-      {
-        error:
-          error instanceof z.ZodError
-            ? error.message
-            : "Unable to queue the digest.",
-      },
-      { status },
-    );
+    return routeErrorResponse(error, "Unable to queue the digest.");
   }
 }

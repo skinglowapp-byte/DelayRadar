@@ -68,27 +68,6 @@ export async function ensureDailyDigestJob(input: {
   };
 }
 
-export async function hasActiveJob(input: {
-  shopId?: string;
-  shipmentId?: string;
-  type: JobType;
-}) {
-  if (!prisma) {
-    return false;
-  }
-
-  const existing = await prisma.queueJob.findFirst({
-    where: {
-      ...(input.shopId ? { shopId: input.shopId } : {}),
-      ...(input.shipmentId ? { shipmentId: input.shipmentId } : {}),
-      type: input.type,
-      status: { in: [JobStatus.PENDING, JobStatus.PROCESSING] },
-    },
-  });
-
-  return Boolean(existing);
-}
-
 export async function claimAvailableJobs(limit = 10) {
   if (!prisma) {
     return [] as QueueJob[];
@@ -103,32 +82,34 @@ export async function claimAvailableJobs(limit = 10) {
     take: limit,
   });
 
-  const claimed: QueueJob[] = [];
+  const claimAttempts = await Promise.all(
+    candidates.map(async (candidate): Promise<QueueJob | null> => {
+      const result = await prisma!.queueJob.updateMany({
+        where: {
+          id: candidate.id,
+          status: JobStatus.PENDING,
+        },
+        data: {
+          status: JobStatus.PROCESSING,
+          lockedAt: new Date(),
+          attempts: { increment: 1 },
+        },
+      });
 
-  for (const candidate of candidates) {
-    const result = await prisma.queueJob.updateMany({
-      where: {
-        id: candidate.id,
-        status: JobStatus.PENDING,
-      },
-      data: {
-        status: JobStatus.PROCESSING,
-        lockedAt: new Date(),
-        attempts: { increment: 1 },
-      },
-    });
+      if (result.count !== 1) {
+        return null;
+      }
 
-    if (result.count === 1) {
-      claimed.push({
+      return {
         ...candidate,
         status: JobStatus.PROCESSING,
         attempts: candidate.attempts + 1,
         lockedAt: new Date(),
-      });
-    }
-  }
+      };
+    }),
+  );
 
-  return claimed;
+  return claimAttempts.filter((job): job is QueueJob => job !== null);
 }
 
 export async function completeJob(jobId: string) {

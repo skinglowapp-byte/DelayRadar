@@ -294,17 +294,19 @@ export async function backfillRecentShipments(shopId: string) {
       shop.currencyCode = edge.node.currentTotalPriceSet.shopMoney.currencyCode;
     }
 
-    for (const fulfillment of edge.node.fulfillments) {
-      for (const trackingInfo of fulfillment.trackingInfo) {
-        if (!trackingInfo.number) {
-          continue;
-        }
+    const trackedNumbers = edge.node.fulfillments.flatMap((fulfillment) =>
+      fulfillment.trackingInfo
+        .filter((trackingInfo) => trackingInfo.number)
+        .map((trackingInfo) => ({ fulfillment, trackingInfo })),
+    );
 
-        await prisma.shipment.upsert({
+    await Promise.all(
+      trackedNumbers.map(({ fulfillment, trackingInfo }) =>
+        prisma!.shipment.upsert({
           where: {
             shopId_trackingNumber: {
               shopId: shop.id,
-              trackingNumber: trackingInfo.number,
+              trackingNumber: trackingInfo.number!,
             },
           },
           update: {
@@ -336,7 +338,7 @@ export async function backfillRecentShipments(shopId: string) {
             shopifyOrderId: edge.node.id,
             shopifyOrderName: edge.node.name,
             shopifyFulfillmentId: fulfillment.id,
-            trackingNumber: trackingInfo.number,
+            trackingNumber: trackingInfo.number!,
             trackingCarrier: trackingInfo.company,
             trackingProvider: TrackingProvider.EASYPOST,
             customerName:
@@ -358,11 +360,11 @@ export async function backfillRecentShipments(shopId: string) {
                 .map((shippingLine) => shippingLine.node.title?.trim())
                 .find(Boolean) ?? null,
           },
-        });
+        }),
+      ),
+    );
 
-        ingested += 1;
-      }
-    }
+    ingested += trackedNumbers.length;
   }
 
   await prisma.shop.update({

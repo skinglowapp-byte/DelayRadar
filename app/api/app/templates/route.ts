@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import { isActionNeededTriggerType } from "@/src/lib/notifications/message-mode";
 import { prisma } from "@/src/lib/prisma";
-import { resolveShopFromRequest } from "@/src/lib/shopify/session-token";
+import { requireShopDomain, routeErrorResponse } from "@/src/lib/shopify/route-helpers";
 
 const templateSchema = z.object({
   name: z.string().min(2),
@@ -33,11 +33,10 @@ export async function POST(request: Request) {
 
   try {
     const body = templateSchema.parse(await request.json());
-    const requestShop = await resolveShopFromRequest(request, { requireJwt: true });
-    const shopDomain = requestShop;
+    const { shopDomain, response } = await requireShopDomain(request);
 
-    if (!shopDomain) {
-      return NextResponse.json({ error: "Shop is required." }, { status: 400 });
+    if (response) {
+      return response;
     }
 
     const shop = await prisma.shop.findUnique({
@@ -105,16 +104,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, templateId: template.id });
   } catch (error) {
-    const status = error instanceof z.ZodError ? 400 : 500;
-
-    return NextResponse.json(
-      {
-        error:
-          error instanceof z.ZodError
-            ? error.message
-            : "Template save failed.",
-      },
-      { status },
-    );
+    return routeErrorResponse(error, "Template save failed.");
   }
 }

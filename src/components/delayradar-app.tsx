@@ -3,6 +3,8 @@
 import {
   useDeferredValue,
   useEffect,
+  useMemo,
+  useRef,
   useState,
   useTransition,
 } from "react";
@@ -1098,6 +1100,15 @@ export function DelayRadarApp({
   const [noteBody, setNoteBody] = useState("");
   const [isSaving, startTransition] = useTransition();
   const deferredQuery = useDeferredValue(exceptionSearch.trim().toLowerCase());
+  const feedbackRef = useRef<HTMLDivElement | null>(null);
+
+  // The banner lives at the top of the page while most save buttons sit far
+  // below it — bring feedback into view so actions never appear to no-op.
+  useEffect(() => {
+    if (notice || error) {
+      feedbackRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [notice, error]);
 
   function buildBootstrapPath(shop: string) {
     const search = new URLSearchParams();
@@ -1173,105 +1184,144 @@ export function DelayRadarApp({
     void load();
   }, [initialShop]);
 
-  const carrierOptions = Array.from(
-    new Set((data?.exceptionInbox ?? []).map((row) => row.carrier)),
-  ).sort((left, right) => left.localeCompare(right));
+  const carrierOptions = useMemo(
+    () =>
+      Array.from(
+        new Set((data?.exceptionInbox ?? []).map((row) => row.carrier)),
+      ).sort((left, right) => left.localeCompare(right)),
+    [data?.exceptionInbox],
+  );
 
-  const exceptionTypeOptions = Array.from(
-    new Set((data?.exceptionInbox ?? []).map((row) => row.exceptionType)),
-  ).sort((left, right) => left.localeCompare(right));
+  const exceptionTypeOptions = useMemo(
+    () =>
+      Array.from(
+        new Set((data?.exceptionInbox ?? []).map((row) => row.exceptionType)),
+      ).sort((left, right) => left.localeCompare(right)),
+    [data?.exceptionInbox],
+  );
 
-  const triageCounts = {
-    fresh: (data?.exceptionInbox ?? []).filter((row) => row.triageBucket === "fresh")
-      .length,
-    aging: (data?.exceptionInbox ?? []).filter((row) => row.triageBucket === "aging")
-      .length,
-    stale: (data?.exceptionInbox ?? []).filter((row) => row.triageBucket === "stale")
-      .length,
-  };
+  const triageCounts = useMemo(() => {
+    const rows = data?.exceptionInbox ?? [];
 
-  const filteredExceptions = (data?.exceptionInbox ?? []).filter((row) => {
-    if (severityFilter !== "all" && row.severity !== severityFilter) {
-      return false;
-    }
+    return {
+      fresh: rows.filter((row) => row.triageBucket === "fresh").length,
+      aging: rows.filter((row) => row.triageBucket === "aging").length,
+      stale: rows.filter((row) => row.triageBucket === "stale").length,
+    };
+  }, [data?.exceptionInbox]);
 
-    if (actionFilter === "needs-action" && !row.customerAction) {
-      return false;
-    }
+  const filteredExceptions = useMemo(
+    () =>
+      (data?.exceptionInbox ?? []).filter((row) => {
+        if (severityFilter !== "all" && row.severity !== severityFilter) {
+          return false;
+        }
 
-    if (actionFilter === "monitoring" && row.customerAction) {
-      return false;
-    }
+        if (actionFilter === "needs-action" && !row.customerAction) {
+          return false;
+        }
 
-    if (carrierFilter !== "all" && row.carrier !== carrierFilter) {
-      return false;
-    }
+        if (actionFilter === "monitoring" && row.customerAction) {
+          return false;
+        }
 
-    if (
-      exceptionTypeFilter !== "all" &&
-      row.exceptionType !== exceptionTypeFilter
-    ) {
-      return false;
-    }
+        if (carrierFilter !== "all" && row.carrier !== carrierFilter) {
+          return false;
+        }
 
-    if (triageFilter !== "all" && row.triageBucket !== triageFilter) {
-      return false;
-    }
+        if (
+          exceptionTypeFilter !== "all" &&
+          row.exceptionType !== exceptionTypeFilter
+        ) {
+          return false;
+        }
 
-    if (workflowFilter !== "all" && row.workflowState !== workflowFilter) {
-      return false;
-    }
+        if (triageFilter !== "all" && row.triageBucket !== triageFilter) {
+          return false;
+        }
 
-    if (!deferredQuery) {
-      return true;
-    }
+        if (workflowFilter !== "all" && row.workflowState !== workflowFilter) {
+          return false;
+        }
 
-    return [
-      row.orderName,
-      row.customerName,
-      row.trackingNumber,
-      row.carrier,
-      row.exceptionType,
-      row.statusLabel,
-    ]
-      .join(" ")
-      .toLowerCase()
-      .includes(deferredQuery);
-  });
+        if (!deferredQuery) {
+          return true;
+        }
 
-  const filteredExceptionIds = filteredExceptions
-    .map((row) => row.id)
-    .join("|");
+        return [
+          row.orderName,
+          row.customerName,
+          row.trackingNumber,
+          row.carrier,
+          row.exceptionType,
+          row.statusLabel,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(deferredQuery);
+      }),
+    [
+      data?.exceptionInbox,
+      severityFilter,
+      actionFilter,
+      carrierFilter,
+      exceptionTypeFilter,
+      triageFilter,
+      workflowFilter,
+      deferredQuery,
+    ],
+  );
+
+  const filteredExceptionIds = useMemo(
+    () => filteredExceptions.map((row) => row.id),
+    [filteredExceptions],
+  );
 
   useEffect(() => {
-    const ids = filteredExceptionIds ? filteredExceptionIds.split("|") : [];
-
-    if (ids.length === 0) {
+    if (filteredExceptionIds.length === 0) {
       if (selectedExceptionId) {
         setSelectedExceptionId("");
       }
       return;
     }
 
-    if (!ids.includes(selectedExceptionId)) {
-      setSelectedExceptionId(ids[0]);
+    if (!filteredExceptionIds.includes(selectedExceptionId)) {
+      setSelectedExceptionId(filteredExceptionIds[0]);
     }
   }, [filteredExceptionIds, selectedExceptionId]);
 
-  const selectedExceptionDetail =
-    data?.exceptionDetails.find(
-      (entry) => entry.shipmentId === selectedExceptionId,
-    ) ?? null;
-  const emailTemplates = (data?.templates ?? []).filter(
-    (template) => template.channel === "EMAIL",
+  const selectedExceptionDetail = useMemo(
+    () =>
+      data?.exceptionDetails.find(
+        (entry) => entry.shipmentId === selectedExceptionId,
+      ) ?? null,
+    [data?.exceptionDetails, selectedExceptionId],
   );
-  const emailTemplateFingerprint = emailTemplates.map((entry) => entry.id).join("|");
+
+  const emailTemplates = useMemo(
+    () => (data?.templates ?? []).filter((template) => template.channel === "EMAIL"),
+    [data?.templates],
+  );
 
   useEffect(() => {
     setManualTemplateId(
       pickManualTemplateId(selectedExceptionDetail, emailTemplates),
     );
-  }, [selectedExceptionId, emailTemplateFingerprint, selectedExceptionDetail]);
+  }, [selectedExceptionId, emailTemplates, selectedExceptionDetail]);
+
+  // Demo mode has no backing shop record, so write calls would fail with a
+  // confusing auth error — intercept them with a friendly notice instead.
+  function blockDemoWrites() {
+    if (data?.mode === "demo") {
+      setError(null);
+      setNotice(
+        "Demo mode is read-only. Install DelayRadar on your store to save changes.",
+      );
+      return true;
+    }
+
+    return false;
+  }
 
   async function refresh() {
     const payload = await fetchBootstrap(shopInput);
@@ -1300,7 +1350,7 @@ export function DelayRadarApp({
   }
 
   function saveTemplate() {
-    if (!templateDraft || !shopInput) {
+    if (!templateDraft || !shopInput || blockDemoWrites()) {
       return;
     }
 
@@ -1338,7 +1388,7 @@ export function DelayRadarApp({
   }
 
   function saveSlackSettings() {
-    if (!shopInput) {
+    if (!shopInput || blockDemoWrites()) {
       return;
     }
 
@@ -1386,7 +1436,7 @@ export function DelayRadarApp({
   }
 
   function sendSlackTest() {
-    if (!shopInput) {
+    if (!shopInput || blockDemoWrites()) {
       return;
     }
 
@@ -1418,7 +1468,7 @@ export function DelayRadarApp({
   }
 
   function queueDailyDigest() {
-    if (!shopInput) {
+    if (!shopInput || blockDemoWrites()) {
       return;
     }
 
@@ -1461,7 +1511,7 @@ export function DelayRadarApp({
   }
 
   function savePrioritySettings() {
-    if (!shopInput) {
+    if (!shopInput || blockDemoWrites()) {
       return;
     }
 
@@ -1502,7 +1552,7 @@ export function DelayRadarApp({
   }
 
   function saveNotificationSettings() {
-    if (!shopInput) {
+    if (!shopInput || blockDemoWrites()) {
       return;
     }
 
@@ -1539,7 +1589,7 @@ export function DelayRadarApp({
   }
 
   function queueSync() {
-    if (!shopInput) {
+    if (!shopInput || blockDemoWrites()) {
       return;
     }
 
@@ -1573,7 +1623,7 @@ export function DelayRadarApp({
   }
 
   function sendManualTemplate() {
-    if (!shopInput || !selectedExceptionDetail || !manualTemplateId) {
+    if (!shopInput || !selectedExceptionDetail || !manualTemplateId || blockDemoWrites()) {
       return;
     }
 
@@ -1615,7 +1665,7 @@ export function DelayRadarApp({
   }
 
   function sendTemplateTest() {
-    if (!shopInput || !templateDraft) {
+    if (!shopInput || !templateDraft || blockDemoWrites()) {
       return;
     }
 
@@ -1662,7 +1712,7 @@ export function DelayRadarApp({
     action: string,
     extra?: Record<string, string>,
   ) {
-    if (!shopInput || !selectedExceptionDetail) {
+    if (!shopInput || !selectedExceptionDetail || blockDemoWrites()) {
       return;
     }
 
@@ -1757,8 +1807,10 @@ export function DelayRadarApp({
             </p>
           </div>
 
-          {error ? <div className="error-banner">{error}</div> : null}
-          {notice ? <div className="success-banner">{notice}</div> : null}
+          <div ref={feedbackRef}>
+            {error ? <div className="error-banner">{error}</div> : null}
+            {notice ? <div className="success-banner">{notice}</div> : null}
+          </div>
 
           {data?.mode === "install" ? (
             <div className="hero-grid">
@@ -2656,14 +2708,23 @@ export function DelayRadarApp({
                           </label>
                           <label className="field">
                             <span className="field-label">Daily digest hour</span>
-                            <input
-                              className="input"
-                              type="number"
-                              min="0"
-                              max="23"
+                            <select
+                              className="select"
                               value={digestHour}
                               onChange={(event) => setDigestHour(event.target.value)}
-                            />
+                            >
+                              {Array.from({ length: 24 }, (_, hour) => (
+                                <option key={hour} value={String(hour)}>
+                                  {hour === 0
+                                    ? "12:00 AM"
+                                    : hour < 12
+                                      ? `${hour}:00 AM`
+                                      : hour === 12
+                                        ? "12:00 PM"
+                                        : `${hour - 12}:00 PM`}
+                                </option>
+                              ))}
+                            </select>
                             <span className="helper-text">
                               Digests are queued for this hour but only sent out
                               during our twice-daily processing windows, so

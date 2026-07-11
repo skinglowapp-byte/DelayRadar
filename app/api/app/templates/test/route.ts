@@ -4,7 +4,7 @@ import { z } from "zod";
 import { sendEmail } from "@/src/lib/notifications/email";
 import { prisma } from "@/src/lib/prisma";
 import { renderShipmentTemplate } from "@/src/lib/notifications/shipment-template";
-import { resolveShopFromRequest } from "@/src/lib/shopify/session-token";
+import { requireShopDomain, routeErrorResponse } from "@/src/lib/shopify/route-helpers";
 import { toHtmlBody } from "@/src/lib/utils";
 
 const templateTestSchema = z.object({
@@ -33,11 +33,10 @@ export async function POST(request: Request) {
 
   try {
     const body = templateTestSchema.parse(await request.json());
-    const requestShop = await resolveShopFromRequest(request, { requireJwt: true });
-    const shopDomain = requestShop;
+    const { shopDomain, response } = await requireShopDomain(request);
 
-    if (!shopDomain) {
-      return NextResponse.json({ error: "Shop is required." }, { status: 400 });
+    if (response) {
+      return response;
     }
 
     const shop = await prisma.shop.findUnique({
@@ -95,16 +94,6 @@ export async function POST(request: Request) {
       body: rendered.body,
     });
   } catch (error) {
-    const status = error instanceof z.ZodError ? 400 : 500;
-
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Template test send failed.",
-      },
-      { status },
-    );
+    return routeErrorResponse(error, "Template test send failed.");
   }
 }

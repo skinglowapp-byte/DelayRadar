@@ -5,10 +5,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useLoaderData,
 } from "react-router";
-
-import { getShopifyApiKey } from "@/src/lib/env";
 
 import stylesheet from "./globals.css?url";
 
@@ -21,13 +18,9 @@ export const links: LinksFunction = () => [
   { rel: "stylesheet", href: stylesheet },
 ];
 
-export const loader = () => ({
-  apiKey: getShopifyApiKey(),
-});
-
+// App Bridge is injected by AppProvider on the embedded /app routes; the
+// public landing page must not load it (it errors without a shop context).
 export default function App() {
-  const { apiKey } = useLoaderData<typeof loader>();
-
   return (
     <html lang="en">
       <head>
@@ -35,12 +28,6 @@ export default function App() {
         <meta name="viewport" content="width=device-width,initial-scale=1" />
         <Meta />
         <Links />
-        {apiKey ? (
-          <script
-            src="https://cdn.shopify.com/shopifycloud/app-bridge.js"
-            data-api-key={apiKey}
-          />
-        ) : null}
       </head>
       <body>
         <Outlet />

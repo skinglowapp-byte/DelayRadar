@@ -1,9 +1,8 @@
 import { NextResponse } from "@/src/lib/next-response";
 
-import { claimAvailableJobs, completeJob, rescheduleJob } from "@/src/lib/jobs";
 import { prisma } from "@/src/lib/prisma";
 import { drainPendingInboundWebhooks } from "@/src/lib/webhooks/process-inbound";
-import { processQueueJob } from "@/src/worker/process-job";
+import { runJobBatch } from "@/src/worker/run-batch";
 
 export const maxDuration = 60;
 
@@ -36,20 +35,8 @@ export async function GET(request: Request) {
     },
   });
 
-  const claimed = await claimAvailableJobs(10);
-
-  let processedJobs = 0;
-  let failedJobs = 0;
-  for (const job of claimed) {
-    try {
-      await processQueueJob(job);
-      await completeJob(job.id);
-      processedJobs += 1;
-    } catch (error) {
-      failedJobs += 1;
-      await rescheduleJob(job, error);
-    }
-  }
+  const { claimed, processed: processedJobs, failed: failedJobs } =
+    await runJobBatch(10);
 
   const [pendingJobs, failedJobsTotal] = await Promise.all([
     prisma.queueJob.count({ where: { status: "PENDING" } }),
@@ -59,7 +46,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     inbound: inboundResult,
     jobs: {
-      claimed: claimed.length,
+      claimed,
       processed: processedJobs,
       failed: failedJobs,
       pending: pendingJobs,

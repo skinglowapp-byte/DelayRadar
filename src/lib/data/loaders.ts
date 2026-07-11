@@ -450,82 +450,92 @@ async function buildCarrierReport(shopId: string): Promise<CarrierReportRow[]> {
     return [];
   }
 
-  const allShipments = await prisma.shipment.findMany({
-    where: { shopId },
-    select: {
-      trackingCarrier: true,
-      latestExceptionType: true,
-      riskScore: true,
-      resolvedAt: true,
-      createdAt: true,
-    },
-  });
+  const [totals, exceptionBreakdown, resolvedExceptions] = await Promise.all([
+    prisma.shipment.groupBy({
+      by: ["trackingCarrier"],
+      where: { shopId },
+      _count: { _all: true },
+      _avg: { riskScore: true },
+    }),
+    prisma.shipment.groupBy({
+      by: ["trackingCarrier", "latestExceptionType"],
+      where: { shopId, latestExceptionType: { not: null } },
+      _count: { _all: true },
+    }),
+    prisma.shipment.findMany({
+      where: { shopId, latestExceptionType: { not: null }, resolvedAt: { not: null } },
+      select: { trackingCarrier: true, resolvedAt: true, createdAt: true },
+    }),
+  ]);
 
   const carrierMap = new Map<
     string,
     {
       total: number;
       exceptions: number;
-      riskSum: number;
+      avgRiskScore: number;
       lostCount: number;
       resolutionHoursSum: number;
       resolvedCount: number;
-      exceptionTypes: Map<string, number>;
+      topExceptionType: string;
+      topExceptionCount: number;
     }
   >();
 
-  for (const shipment of allShipments) {
-    const carrier = shipment.trackingCarrier ?? "Unknown";
+  function entryFor(carrier: string) {
     let entry = carrierMap.get(carrier);
 
     if (!entry) {
       entry = {
         total: 0,
         exceptions: 0,
-        riskSum: 0,
+        avgRiskScore: 0,
         lostCount: 0,
         resolutionHoursSum: 0,
         resolvedCount: 0,
-        exceptionTypes: new Map(),
+        topExceptionType: "None",
+        topExceptionCount: 0,
       };
       carrierMap.set(carrier, entry);
     }
 
-    entry.total++;
-    entry.riskSum += shipment.riskScore;
+    return entry;
+  }
 
-    if (shipment.latestExceptionType) {
-      entry.exceptions++;
-      const typeCount =
-        entry.exceptionTypes.get(shipment.latestExceptionType) ?? 0;
-      entry.exceptionTypes.set(shipment.latestExceptionType, typeCount + 1);
+  for (const row of totals) {
+    const entry = entryFor(row.trackingCarrier ?? "Unknown");
+    entry.total = row._count._all;
+    entry.avgRiskScore = Math.round(row._avg.riskScore ?? 0);
+  }
 
-      if (shipment.latestExceptionType === "LOST_IN_TRANSIT") {
-        entry.lostCount++;
-      }
-
-      if (shipment.resolvedAt) {
-        entry.resolvedCount++;
-        entry.resolutionHoursSum +=
-          (shipment.resolvedAt.getTime() - shipment.createdAt.getTime()) /
-          3600000;
-      }
+  for (const row of exceptionBreakdown) {
+    if (!row.latestExceptionType) {
+      continue;
     }
+
+    const entry = entryFor(row.trackingCarrier ?? "Unknown");
+    entry.exceptions += row._count._all;
+
+    if (row.latestExceptionType === "LOST_IN_TRANSIT") {
+      entry.lostCount += row._count._all;
+    }
+
+    if (row._count._all > entry.topExceptionCount) {
+      entry.topExceptionCount = row._count._all;
+      entry.topExceptionType = titleize(row.latestExceptionType);
+    }
+  }
+
+  for (const shipment of resolvedExceptions) {
+    const entry = entryFor(shipment.trackingCarrier ?? "Unknown");
+    entry.resolvedCount++;
+    entry.resolutionHoursSum +=
+      (shipment.resolvedAt!.getTime() - shipment.createdAt.getTime()) / 3600000;
   }
 
   const rows: CarrierReportRow[] = [];
 
   for (const [carrier, entry] of carrierMap) {
-    let topExceptionType = "None";
-    let topCount = 0;
-
-    for (const [type, count] of entry.exceptionTypes) {
-      if (count > topCount) {
-        topCount = count;
-        topExceptionType = titleize(type);
-      }
-    }
-
     rows.push({
       carrier,
       totalShipments: entry.total,
@@ -534,9 +544,8 @@ async function buildCarrierReport(shopId: string): Promise<CarrierReportRow[]> {
         entry.total > 0
           ? Math.round((entry.exceptions / entry.total) * 100)
           : 0,
-      avgRiskScore:
-        entry.total > 0 ? Math.round(entry.riskSum / entry.total) : 0,
-      topExceptionType,
+      avgRiskScore: entry.avgRiskScore,
+      topExceptionType: entry.topExceptionType,
       lostInTransitCount: entry.lostCount,
       avgResolutionHours:
         entry.resolvedCount > 0
