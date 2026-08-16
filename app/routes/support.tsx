@@ -1,3 +1,14 @@
+export function meta() {
+  return [
+    { title: "Support — DelayRadar" },
+    {
+      name: "description",
+      content:
+        "Get help with DelayRadar: contact support, setup FAQs, and links to privacy and terms.",
+    },
+  ];
+}
+
 export default function SupportRoute() {
   return (
     <main
@@ -44,9 +55,12 @@ export default function SupportRoute() {
 
       <h3>How do I set up email notifications?</h3>
       <p>
-        Go to the <strong>Settings</strong> tab in DelayRadar and configure your
-        email provider (Postmark or SendGrid). Then customize your notification
-        templates in the <strong>Templates</strong> tab.
+        Email delivery is managed by DelayRadar — there is no email provider to
+        configure on your end. Use the <strong>Templates</strong> tab to
+        customize the subject and body for each exception type, and the{" "}
+        <strong>Settings</strong> tab to choose which exceptions trigger an
+        automatic email. You can also send a manual message from any shipment in
+        the <strong>Exceptions</strong> inbox.
       </p>
 
       <h3>How do I connect Slack?</h3>

@@ -22,8 +22,20 @@ export async function drainPendingInboundWebhooks(limit = 25) {
     return { processed: 0, failed: 0 };
   }
 
+  // Pick up brand-new webhooks and previously-failed ones that haven't
+  // exhausted their retry budget, so a transient error doesn't permanently
+  // drop a carrier event.
+  const MAX_INBOUND_RETRIES = 5;
   const candidates = await prisma.inboundWebhook.findMany({
-    where: { status: ProcessingStatus.PENDING },
+    where: {
+      OR: [
+        { status: ProcessingStatus.PENDING },
+        {
+          status: ProcessingStatus.FAILED,
+          retryCount: { lt: MAX_INBOUND_RETRIES },
+        },
+      ],
+    },
     orderBy: { receivedAt: "asc" },
     take: limit,
   });

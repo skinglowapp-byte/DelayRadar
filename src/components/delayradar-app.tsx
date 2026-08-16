@@ -418,6 +418,46 @@ export function DelayRadarApp({
     });
   }
 
+  function clearSlackWebhook() {
+    if (!shopInput || blockDemoWrites()) {
+      return;
+    }
+
+    startTransition(() => {
+      void (async () => {
+        try {
+          setError(null);
+          setNotice(null);
+          await readJson("/api/app/settings/slack", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              shop: shopInput,
+              webhookUrl: "",
+              clearWebhook: true,
+              digestHour: Number(digestHour),
+              notifyHighRiskOnly,
+              slackRules: (data?.settings.slackRules ?? []).map((rule) => ({
+                triggerType: rule.triggerType,
+                active: slackRuleState[rule.triggerType] ?? rule.active,
+              })),
+            }),
+          });
+          await refresh();
+          setNotice("Slack webhook removed. Alerts and digests are paused.");
+        } catch (saveError) {
+          setError(
+            saveError instanceof Error
+              ? saveError.message
+              : "Failed to remove the Slack webhook.",
+          );
+        }
+      })();
+    });
+  }
+
   function sendSlackTest() {
     if (!shopInput || blockDemoWrites()) {
       return;
@@ -741,15 +781,33 @@ export function DelayRadarApp({
   }
 
   function retryFailedJobs() {
-    startTransition(async () => {
-      await readJson("/api/app/jobs/retry", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          shop: data?.shop?.domain,
-          retryAllFailed: true,
-        }),
-      });
+    if (!shopInput || blockDemoWrites()) {
+      return;
+    }
+
+    startTransition(() => {
+      void (async () => {
+        try {
+          setError(null);
+          setNotice(null);
+          await readJson("/api/app/jobs/retry", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              shop: shopInput,
+              retryAllFailed: true,
+            }),
+          });
+          await refresh();
+          setNotice("Failed jobs re-queued. Run the worker to retry them.");
+        } catch (retryError) {
+          setError(
+            retryError instanceof Error
+              ? retryError.message
+              : "Failed to re-queue failed jobs.",
+          );
+        }
+      })();
     });
   }
 
@@ -776,6 +834,33 @@ export function DelayRadarApp({
             <p className="hero-copy" style={{ marginTop: "1rem" }}>
               Loading your store data...
             </p>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
+  // Bootstrap failed and we have no data to render — show a real error state
+  // with a retry, never a half-populated dashboard with dead controls.
+  if (!data) {
+    return (
+      <main className="page-shell">
+        <div className="app-frame">
+          <section className="hero-panel" style={{ textAlign: "center", padding: "4rem 1rem" }}>
+            <span className="badge hot">DelayRadar</span>
+            <h1 className="hero-title" style={{ marginTop: "1rem" }}>
+              We couldn’t load your store data
+            </h1>
+            <div className="error-banner" style={{ margin: "1rem auto", maxWidth: "32rem" }}>
+              {error}
+            </div>
+            <button
+              className="button-primary"
+              type="button"
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </button>
           </section>
         </div>
       </main>
@@ -893,6 +978,7 @@ export function DelayRadarApp({
                         setSelectedExceptionId(id);
                         setActiveTab("exceptions");
                       }}
+                      onNavigateTab={(tab) => setActiveTab(tab as TabKey)}
                     />
                   ) : null}
 
@@ -983,6 +1069,7 @@ export function DelayRadarApp({
                       onSendSlackTest={sendSlackTest}
                       onQueueDailyDigest={queueDailyDigest}
                       onSaveSlackSettings={saveSlackSettings}
+                      onClearSlackWebhook={clearSlackWebhook}
                       onRetryFailedJobs={retryFailedJobs}
                     />
                   ) : null}
@@ -991,6 +1078,7 @@ export function DelayRadarApp({
                 <div className="surface-panel stack">
                   {activeTab === "exceptions" ? (
                     <ExceptionDetailPanel
+                      key={selectedExceptionDetail?.shipmentId ?? "none"}
                       detail={selectedExceptionDetail}
                       templates={emailTemplates}
                       selectedTemplateId={manualTemplateId}

@@ -19,10 +19,17 @@ export async function requireShopDomain(
 }
 
 export function routeErrorResponse(error: unknown, fallbackMessage: string) {
-  const status = error instanceof z.ZodError ? 400 : 500;
+  if (error instanceof z.ZodError) {
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
 
-  return NextResponse.json(
-    { error: error instanceof z.ZodError ? error.message : fallbackMessage },
-    { status },
-  );
+  // A malformed or empty JSON body is a client error, not a server fault.
+  if (error instanceof SyntaxError) {
+    return NextResponse.json(
+      { error: "Request body must be valid JSON." },
+      { status: 400 },
+    );
+  }
+
+  return NextResponse.json({ error: fallbackMessage }, { status: 500 });
 }

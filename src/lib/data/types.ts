@@ -188,6 +188,10 @@ export type OnboardingStep = {
   label: string;
   complete: boolean;
   href?: string;
+  /** Dashboard tab this step links to, if actionable. */
+  tab?: string;
+  /** Optional steps don't block checklist completion. */
+  optional?: boolean;
 };
 
 export type OnboardingChecklist = {

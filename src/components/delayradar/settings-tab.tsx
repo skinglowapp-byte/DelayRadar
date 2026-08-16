@@ -35,6 +35,7 @@ export function SettingsTab({
   onSendSlackTest,
   onQueueDailyDigest,
   onSaveSlackSettings,
+  onClearSlackWebhook,
   onRetryFailedJobs,
 }: {
   health: AppBootstrap["health"] | null;
@@ -63,6 +64,7 @@ export function SettingsTab({
   onSendSlackTest: () => void;
   onQueueDailyDigest: () => void;
   onSaveSlackSettings: () => void;
+  onClearSlackWebhook: () => void;
   onRetryFailedJobs: () => void;
 }) {
   return (
@@ -415,6 +417,16 @@ export function SettingsTab({
             >
               Save Slack settings
             </button>
+            {settings?.slackConfigured ? (
+              <button
+                className="button-secondary"
+                type="button"
+                onClick={onClearSlackWebhook}
+                disabled={isSaving}
+              >
+                Remove webhook
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

@@ -1,12 +1,33 @@
 import { NextResponse } from "@/src/lib/next-response";
 
 import { prisma } from "@/src/lib/prisma";
+import { requireShopDomain } from "@/src/lib/shopify/route-helpers";
 
-export async function GET() {
+export async function GET(request: Request) {
   if (!prisma) {
     return NextResponse.json(
       { status: "degraded", reason: "No database connection." },
       { status: 503 },
+    );
+  }
+
+  // Health counts are shop-scoped and require a verified session token —
+  // never expose platform-wide backlog/failure volume to anonymous callers.
+  const { shopDomain, response } = await requireShopDomain(request);
+
+  if (response) {
+    return response;
+  }
+
+  const shop = await prisma.shop.findUnique({
+    where: { domain: shopDomain },
+    select: { id: true },
+  });
+
+  if (!shop) {
+    return NextResponse.json(
+      { error: "Connected shop not found." },
+      { status: 404 },
     );
   }
 
@@ -19,13 +40,25 @@ export async function GET() {
       webhookFailures,
       notificationFailures,
     ] = await Promise.all([
-      prisma.queueJob.count({ where: { status: "PENDING" } }),
-      prisma.queueJob.count({ where: { status: "FAILED" } }),
+      prisma.queueJob.count({
+        where: { status: "PENDING", shopId: shop.id },
+      }),
+      prisma.queueJob.count({
+        where: { status: "FAILED", shopId: shop.id },
+      }),
       prisma.inboundWebhook.count({
-        where: { status: "FAILED", receivedAt: { gte: oneDayAgo } },
+        where: {
+          status: "FAILED",
+          shopId: shop.id,
+          receivedAt: { gte: oneDayAgo },
+        },
       }),
       prisma.notificationLog.count({
-        where: { status: "FAILED", createdAt: { gte: oneDayAgo } },
+        where: {
+          status: "FAILED",
+          shopId: shop.id,
+          createdAt: { gte: oneDayAgo },
+        },
       }),
     ]);
 

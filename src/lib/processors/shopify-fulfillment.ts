@@ -1,10 +1,68 @@
-import { JobType, TrackingProvider, type Prisma } from "@prisma/client";
+import {
+  JobStatus,
+  JobType,
+  TrackingProvider,
+  type Prisma,
+  type Shipment,
+} from "@prisma/client";
 import { z } from "zod";
 
 import { decrypt } from "@/src/lib/crypto";
 import { enqueueJob } from "@/src/lib/jobs";
 import { prisma } from "@/src/lib/prisma";
 import { shopifyAdminGraphql } from "@/src/lib/shopify/admin";
+
+// Shopify webhooks send bare numeric IDs while the Admin GraphQL API sends
+// GIDs (gid://shopify/Order/123). Normalize both to the numeric string so the
+// two ingest paths write the same value and GDPR redaction / dedupe match.
+function toNumericId(value: string | number | null | undefined): string | null {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const match = String(value).match(/(\d+)\s*$/);
+  return match ? match[1] : String(value);
+}
+
+// Enqueue a CREATE_TRACKER job for a shipment that doesn't yet have an
+// EasyPost tracker, skipping shipments that already have one and de-duping
+// against any pending/processing tracker job. This is what makes backfilled
+// shipments actually monitored, and prevents fulfillments/create +
+// fulfillments/update from creating two billable trackers for one shipment.
+async function enqueueTrackerCreation(
+  shopId: string,
+  shipment: Shipment,
+  trackingNumber: string,
+  carrier: string | null | undefined,
+) {
+  if (!prisma || shipment.trackingProviderId) {
+    return;
+  }
+
+  const existing = await prisma.queueJob.findFirst({
+    where: {
+      shipmentId: shipment.id,
+      type: JobType.CREATE_TRACKER,
+      status: { in: [JobStatus.PENDING, JobStatus.PROCESSING] },
+    },
+    select: { id: true },
+  });
+
+  if (existing) {
+    return;
+  }
+
+  await enqueueJob({
+    shopId,
+    shipmentId: shipment.id,
+    type: JobType.CREATE_TRACKER,
+    payload: {
+      shipmentId: shipment.id,
+      trackingNumber,
+      carrier: carrier ?? "",
+    } satisfies Prisma.InputJsonObject,
+  });
+}
 
 const fulfillmentWebhookSchema = z.object({
   id: z.number(),
@@ -16,6 +74,16 @@ const fulfillmentWebhookSchema = z.object({
   created_at: z.string().nullish(),
   updated_at: z.string().nullish(),
   shipment_status: z.string().nullish(),
+  // The real fulfillments/create|update payload carries the customer contact
+  // at the top level (there is no nested `order`). Capture both.
+  email: z.string().nullish(),
+  destination: z
+    .object({
+      first_name: z.string().nullish(),
+      last_name: z.string().nullish(),
+      phone: z.string().nullish(),
+    })
+    .nullish(),
   order: z
     .object({
       id: z.number().nullish(),
@@ -55,9 +123,21 @@ function getTrackingNumbers(payload: FulfillmentWebhookPayload) {
 }
 
 function getCustomerName(payload: FulfillmentWebhookPayload) {
-  const firstName = payload.order?.customer?.first_name?.trim();
-  const lastName = payload.order?.customer?.last_name?.trim();
+  const firstName =
+    payload.order?.customer?.first_name?.trim() ??
+    payload.destination?.first_name?.trim();
+  const lastName =
+    payload.order?.customer?.last_name?.trim() ??
+    payload.destination?.last_name?.trim();
   return [firstName, lastName].filter(Boolean).join(" ") || null;
+}
+
+function getCustomerEmail(payload: FulfillmentWebhookPayload) {
+  return payload.order?.email ?? payload.email ?? null;
+}
+
+function getCustomerPhone(payload: FulfillmentWebhookPayload) {
+  return payload.order?.phone ?? payload.destination?.phone ?? null;
 }
 
 function parseMoneyToCents(value: string | number | null | undefined) {
@@ -110,15 +190,12 @@ export async function ingestShopifyFulfillmentWebhook(
         },
       },
       update: {
-        shopifyFulfillmentId: String(parsed.id),
-        shopifyOrderId:
-          parsed.order?.id || parsed.order_id
-            ? String(parsed.order?.id ?? parsed.order_id)
-            : null,
+        shopifyFulfillmentId: toNumericId(parsed.id),
+        shopifyOrderId: toNumericId(parsed.order?.id ?? parsed.order_id),
         shopifyOrderName: parsed.order?.name ?? parsed.name ?? null,
         trackingCarrier: parsed.tracking_company ?? undefined,
-        customerEmail: parsed.order?.email ?? undefined,
-        customerPhone: parsed.order?.phone ?? undefined,
+        customerEmail: getCustomerEmail(parsed) ?? undefined,
+        customerPhone: getCustomerPhone(parsed) ?? undefined,
         customerName: getCustomerName(parsed) ?? undefined,
         orderCreatedAt: parsed.order?.created_at
           ? new Date(parsed.order.created_at)
@@ -129,17 +206,14 @@ export async function ingestShopifyFulfillmentWebhook(
       },
       create: {
         shopId: shop.id,
-        shopifyFulfillmentId: String(parsed.id),
-        shopifyOrderId:
-          parsed.order?.id || parsed.order_id
-            ? String(parsed.order?.id ?? parsed.order_id)
-            : null,
+        shopifyFulfillmentId: toNumericId(parsed.id),
+        shopifyOrderId: toNumericId(parsed.order?.id ?? parsed.order_id),
         shopifyOrderName: parsed.order?.name ?? parsed.name ?? null,
         trackingNumber,
         trackingCarrier: parsed.tracking_company ?? null,
         trackingProvider: TrackingProvider.EASYPOST,
-        customerEmail: parsed.order?.email ?? null,
-        customerPhone: parsed.order?.phone ?? null,
+        customerEmail: getCustomerEmail(parsed),
+        customerPhone: getCustomerPhone(parsed),
         customerName: getCustomerName(parsed),
         orderCreatedAt: parsed.order?.created_at
           ? new Date(parsed.order.created_at)
@@ -150,16 +224,12 @@ export async function ingestShopifyFulfillmentWebhook(
       },
     });
 
-    await enqueueJob({
-      shopId: shop.id,
-      shipmentId: shipment.id,
-      type: JobType.CREATE_TRACKER,
-      payload: {
-        shipmentId: shipment.id,
-        trackingNumber,
-        carrier: parsed.tracking_company ?? "",
-      } satisfies Prisma.InputJsonObject,
-    });
+    await enqueueTrackerCreation(
+      shop.id,
+      shipment,
+      trackingNumber,
+      parsed.tracking_company,
+    );
   }
 
   await prisma.shop.update({
@@ -231,12 +301,9 @@ export async function backfillRecentShipments(shopId: string) {
 
   const accessToken = decrypt(shop.offlineAccessToken);
 
-  const data = await shopifyAdminGraphql<BackfillOrdersResponse>({
-    shop: shop.domain,
-    accessToken,
-    query: `#graphql
-      query DelayRadarBackfillOrders {
-        orders(first: 25, reverse: true, sortKey: CREATED_AT, query: "fulfillment_status:fulfilled OR fulfillment_status:partial") {
+  const query = `#graphql
+      query DelayRadarBackfillOrders($cursor: String) {
+        orders(first: 50, after: $cursor, reverse: true, sortKey: CREATED_AT, query: "fulfillment_status:fulfilled OR fulfillment_status:partial") {
           pageInfo {
             hasNextPage
             endCursor
@@ -278,31 +345,56 @@ export async function backfillRecentShipments(shopId: string) {
           }
         }
       }
-    `,
-  });
+    `;
 
   let ingested = 0;
+  let cursor: string | null = null;
+  let pages = 0;
+  // Cap pages per invocation so one huge store can't run the function past its
+  // timeout. 20 pages × 50 orders = 1,000 orders per sync; the next sync
+  // resumes newer orders (reverse chronological) and re-upserts idempotently.
+  const MAX_PAGES = 20;
 
-  for (const edge of data.orders.edges) {
-    if (!shop.currencyCode && edge.node.currentTotalPriceSet?.shopMoney.currencyCode) {
-      await prisma.shop.update({
-        where: { id: shop.id },
-        data: {
-          currencyCode: edge.node.currentTotalPriceSet.shopMoney.currencyCode,
-        },
+  do {
+    const data: BackfillOrdersResponse =
+      await shopifyAdminGraphql<BackfillOrdersResponse>({
+        shop: shop.domain,
+        accessToken,
+        query,
+        variables: { cursor },
       });
-      shop.currencyCode = edge.node.currentTotalPriceSet.shopMoney.currencyCode;
-    }
 
-    const trackedNumbers = edge.node.fulfillments.flatMap((fulfillment) =>
-      fulfillment.trackingInfo
-        .filter((trackingInfo) => trackingInfo.number)
-        .map((trackingInfo) => ({ fulfillment, trackingInfo })),
-    );
+    for (const edge of data.orders.edges) {
+      if (
+        !shop.currencyCode &&
+        edge.node.currentTotalPriceSet?.shopMoney.currencyCode
+      ) {
+        await prisma.shop.update({
+          where: { id: shop.id },
+          data: {
+            currencyCode: edge.node.currentTotalPriceSet.shopMoney.currencyCode,
+          },
+        });
+        shop.currencyCode = edge.node.currentTotalPriceSet.shopMoney.currencyCode;
+      }
 
-    await Promise.all(
-      trackedNumbers.map(({ fulfillment, trackingInfo }) =>
-        prisma!.shipment.upsert({
+      const trackedNumbers = edge.node.fulfillments.flatMap((fulfillment) =>
+        fulfillment.trackingInfo
+          .filter((trackingInfo) => trackingInfo.number)
+          .map((trackingInfo) => ({ fulfillment, trackingInfo })),
+      );
+
+      const customerName =
+        [edge.node.customer?.firstName, edge.node.customer?.lastName]
+          .filter(Boolean)
+          .join(" ") || null;
+      const shippingMethodLabel =
+        edge.node.shippingLines.edges
+          .map((shippingLine) => shippingLine.node.title?.trim())
+          .find(Boolean) ?? null;
+
+      for (const { fulfillment, trackingInfo } of trackedNumbers) {
+        const shipment = await prisma.shipment.upsert({
           where: {
             shopId_trackingNumber: {
               shopId: shop.id,
@@ -310,44 +402,30 @@ export async function backfillRecentShipments(shopId: string) {
             },
           },
           update: {
-            shopifyOrderId: edge.node.id,
+            shopifyOrderId: toNumericId(edge.node.id),
             shopifyOrderName: edge.node.name,
-            shopifyFulfillmentId: fulfillment.id,
+            shopifyFulfillmentId: toNumericId(fulfillment.id),
             trackingCarrier: trackingInfo.company ?? undefined,
-            customerName:
-              [
-                edge.node.customer?.firstName,
-                edge.node.customer?.lastName,
-              ]
-                .filter(Boolean)
-                .join(" ") || undefined,
+            customerName: customerName ?? undefined,
             customerEmail: edge.node.customer?.email ?? undefined,
             customerPhone: edge.node.customer?.phone ?? undefined,
             orderCreatedAt: new Date(edge.node.createdAt),
-            orderValueCents: parseMoneyToCents(
-              edge.node.currentTotalPriceSet?.shopMoney.amount,
-            ) ?? undefined,
+            orderValueCents:
+              parseMoneyToCents(
+                edge.node.currentTotalPriceSet?.shopMoney.amount,
+              ) ?? undefined,
             orderTags: edge.node.tags.join(", ") || undefined,
-            shippingMethodLabel:
-              edge.node.shippingLines.edges
-                .map((shippingLine) => shippingLine.node.title?.trim())
-                .find(Boolean) ?? undefined,
+            shippingMethodLabel: shippingMethodLabel ?? undefined,
           },
           create: {
             shopId: shop.id,
-            shopifyOrderId: edge.node.id,
+            shopifyOrderId: toNumericId(edge.node.id),
             shopifyOrderName: edge.node.name,
-            shopifyFulfillmentId: fulfillment.id,
+            shopifyFulfillmentId: toNumericId(fulfillment.id),
             trackingNumber: trackingInfo.number!,
             trackingCarrier: trackingInfo.company,
             trackingProvider: TrackingProvider.EASYPOST,
-            customerName:
-              [
-                edge.node.customer?.firstName,
-                edge.node.customer?.lastName,
-              ]
-                .filter(Boolean)
-                .join(" ") || null,
+            customerName,
             customerEmail: edge.node.customer?.email ?? null,
             customerPhone: edge.node.customer?.phone ?? null,
             orderCreatedAt: new Date(edge.node.createdAt),
@@ -355,17 +433,28 @@ export async function backfillRecentShipments(shopId: string) {
               edge.node.currentTotalPriceSet?.shopMoney.amount,
             ),
             orderTags: edge.node.tags.join(", ") || null,
-            shippingMethodLabel:
-              edge.node.shippingLines.edges
-                .map((shippingLine) => shippingLine.node.title?.trim())
-                .find(Boolean) ?? null,
+            shippingMethodLabel,
           },
-        }),
-      ),
-    );
+        });
 
-    ingested += trackedNumbers.length;
-  }
+        // Backfilled shipments must get an EasyPost tracker too — otherwise no
+        // carrier events ever arrive and nothing is monitored.
+        await enqueueTrackerCreation(
+          shop.id,
+          shipment,
+          trackingInfo.number!,
+          trackingInfo.company,
+        );
+
+        ingested += 1;
+      }
+    }
+
+    cursor = data.orders.pageInfo.hasNextPage
+      ? data.orders.pageInfo.endCursor
+      : null;
+    pages += 1;
+  } while (cursor && pages < MAX_PAGES);
 
   await prisma.shop.update({
     where: { id: shop.id },

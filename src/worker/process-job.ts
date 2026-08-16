@@ -10,6 +10,7 @@ import type { QueueJob } from "@prisma/client";
 import { sendEmail } from "@/src/lib/notifications/email";
 import { renderShipmentTemplate } from "@/src/lib/notifications/shipment-template";
 import { sendSlackMessage } from "@/src/lib/notifications/slack";
+import { startOfLocalDay } from "@/src/lib/digest/schedule";
 import { evaluateShipmentPriority } from "@/src/lib/priority/shipment-priority";
 import { backfillRecentShipments } from "@/src/lib/processors/shopify-fulfillment";
 import { prisma } from "@/src/lib/prisma";
@@ -124,7 +125,9 @@ async function processNotificationJob(shipmentId: string) {
 
   const shouldSendEmail =
     emailRule?.active &&
-    shipment.riskScore >= emailRule.minRiskScore &&
+    // Gate on the priority-boosted score so a VIP / high-value / expedited
+    // order isn't filtered out of customer comms (Slack uses the same score).
+    priority.effectiveRiskScore >= emailRule.minRiskScore &&
     (!emailRule.onlyWhenActionRequired || shipment.actionRequired);
 
   const template =
@@ -299,8 +302,10 @@ async function processDailyDigestJob(input: {
   }
 
   if (!input.force) {
-    const startOfDay = new Date();
-    startOfDay.setUTCHours(0, 0, 0, 0);
+    // Dedupe within the shop's own local day, not the UTC day — otherwise a
+    // 9pm-ET digest and a 9am-ET digest fall in different UTC days and a shop
+    // can receive two (or a suppressed) digest.
+    const startOfDay = startOfLocalDay(shop.timezone);
 
     const existingDigest = await prisma.notificationLog.findFirst({
       where: {
@@ -330,6 +335,9 @@ async function processDailyDigestJob(input: {
     Date.now() - noMovementThresholdHours * 3600000,
   );
   const [explicitExceptions, staleCandidates] = await Promise.all([
+    // Don't filter by raw riskScore in SQL — the high-risk cut must happen
+    // AFTER the priority boost (below), or VIP/high-value orders that only
+    // clear 70 once boosted get dropped from the digest they belong in.
     prisma.shipment.findMany({
       where: {
         shopId: shop.id,
@@ -337,16 +345,9 @@ async function processDailyDigestJob(input: {
         latestStatus: {
           not: ShipmentStatus.DELIVERED,
         },
-        ...(shop.slackDestination.notifyHighRiskOnly
-          ? {
-              riskScore: {
-                gte: 70,
-              },
-            }
-          : {}),
       },
       orderBy: [{ riskScore: "desc" }, { updatedAt: "desc" }],
-      take: 10,
+      take: 30,
     }),
     prisma.shipment.findMany({
       where: {
@@ -421,6 +422,13 @@ async function processDailyDigestJob(input: {
       };
     }),
   ]
+    .filter((entry) =>
+      // Apply the noise filter on the boosted score, consistently for both
+      // explicit exceptions and no-movement entries.
+      shop.slackDestination?.notifyHighRiskOnly
+        ? entry.effectiveRiskScore >= 70
+        : true,
+    )
     .sort((left, right) => {
       if (right.effectiveRiskScore !== left.effectiveRiskScore) {
         return right.effectiveRiskScore - left.effectiveRiskScore;

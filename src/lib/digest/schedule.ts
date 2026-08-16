@@ -90,6 +90,30 @@ export function normalizeTimeZone(timeZone: string | null | undefined) {
   }
 }
 
+/**
+ * The UTC instant of the most recent local midnight for the given time zone.
+ * Used to dedupe "already sent a digest today" in the shop's own day, not UTC.
+ */
+export function startOfLocalDay(
+  timeZone: string | null | undefined,
+  now: Date = new Date(),
+): Date {
+  const zone = normalizeTimeZone(timeZone);
+  const localNow = zonedParts(now, zone);
+
+  return utcFromZonedParts(
+    {
+      year: localNow.year,
+      month: localNow.month,
+      day: localNow.day,
+      hour: 0,
+      minute: 0,
+      second: 0,
+    },
+    zone,
+  );
+}
+
 export function nextDigestRunAt(input: {
   timeZone: string | null | undefined;
   digestHour: number;

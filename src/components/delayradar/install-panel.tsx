@@ -48,16 +48,24 @@ export function InstallPanel({
         >
           Preview with demo shop
         </button>
+        <p className="microcopy" style={{ marginTop: "0.75rem" }}>
+          <strong>$19.99/month</strong> · 7-day free trial · cancel anytime by
+          uninstalling.
+        </p>
+        <p className="microcopy">
+          <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> ·{" "}
+          <a href="/support">Support</a>
+        </p>
       </div>
 
       <div className="surface-panel stack">
-        <span className="eyebrow">What ships in MVP</span>
+        <span className="eyebrow">What you get</span>
         <div className="callout">
-          <strong>Tracking-first integration path</strong>
+          <strong>Works on top of your existing shipping stack</strong>
           <p className="microcopy">
-            DelayRadar uses EasyPost trackers for exception monitoring so
-            merchants can keep ShipStation, Shippo, or other label tools in
-            place.
+            DelayRadar monitors carrier tracking for exceptions — delays, failed
+            deliveries, and lost packages — so you can keep ShipStation, Shippo,
+            or whatever label tools you already use.
           </p>
         </div>
         <div className="timeline">

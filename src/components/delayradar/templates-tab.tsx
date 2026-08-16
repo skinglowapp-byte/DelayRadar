@@ -48,7 +48,7 @@ export function TemplatesTab({
           <span className="eyebrow">Proactive comms</span>
           <h2 className="section-title">Customer messaging templates</h2>
         </div>
-        <span className="pill good">
+        <span className={cn("pill", hasEmailProvider ? "good" : "warn")}>
           {hasEmailProvider
             ? "Email provider ready"
             : "Email provider not configured"}

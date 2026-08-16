@@ -735,20 +735,25 @@ function buildOnboardingChecklist(shop: {
   const steps: OnboardingStep[] = [
     { key: "install", label: "Install the Shopify app", complete: shop.isInstalled },
     { key: "token", label: "Authorize offline access", complete: Boolean(shop.offlineAccessToken) },
-    { key: "sync", label: "Run your first fulfillment sync", complete: Boolean(shop.lastSyncedAt), href: "#settings" },
-    { key: "shipments", label: "Import at least one shipment", complete: counts.totalShipments > 0 },
-    { key: "trackers", label: "Create EasyPost trackers", complete: counts.activeTrackers > 0 },
-    { key: "templates", label: "Configure notification templates", complete: counts.templateCount > 0, href: "#settings" },
-    { key: "slack", label: "Set up Slack integration", complete: Boolean(shop.slackDestination?.webhookUrl), href: "#settings" },
+    { key: "sync", label: "Run your first fulfillment sync", complete: Boolean(shop.lastSyncedAt), tab: "overview" },
+    { key: "shipments", label: "Import at least one shipment", complete: counts.totalShipments > 0, tab: "overview" },
+    { key: "trackers", label: "Create EasyPost trackers", complete: counts.activeTrackers > 0, tab: "overview" },
+    { key: "templates", label: "Configure notification templates", complete: counts.templateCount > 0, tab: "templates" },
+    // Slack is optional — plenty of merchants run on email alone, so it must
+    // not block the checklist from ever completing.
+    { key: "slack", label: "Set up Slack integration (optional)", complete: Boolean(shop.slackDestination?.webhookUrl), tab: "settings", optional: true },
   ];
 
   const completedCount = steps.filter((s) => s.complete).length;
+  const requiredSteps = steps.filter((s) => !s.optional);
+  const requiredComplete = requiredSteps.filter((s) => s.complete).length;
 
   return {
     steps,
     completedCount,
     totalCount: steps.length,
-    allComplete: completedCount === steps.length,
+    // Complete once every *required* step is done; optional steps don't gate.
+    allComplete: requiredComplete === requiredSteps.length,
   };
 }
 

@@ -4,6 +4,8 @@ import { prisma } from "@/src/lib/prisma";
 
 type JobPayload = Prisma.InputJsonObject;
 
+export const MAX_JOB_ATTEMPTS = 5;
+
 export async function enqueueJob(input: {
   shopId?: string | null;
   shipmentId?: string | null;
@@ -84,6 +86,10 @@ export async function claimAvailableJobs(limit = 10) {
 
   const claimAttempts = await Promise.all(
     candidates.map(async (candidate): Promise<QueueJob | null> => {
+      // Claim without burning an attempt. `attempts` is only incremented when
+      // a job actually fails (see rescheduleJob), so a function timeout that
+      // leaves a job PROCESSING — later reset to PENDING by the cron — does
+      // not cost the job one of its retries.
       const result = await prisma!.queueJob.updateMany({
         where: {
           id: candidate.id,
@@ -92,7 +98,6 @@ export async function claimAvailableJobs(limit = 10) {
         data: {
           status: JobStatus.PROCESSING,
           lockedAt: new Date(),
-          attempts: { increment: 1 },
         },
       });
 
@@ -103,7 +108,6 @@ export async function claimAvailableJobs(limit = 10) {
       return {
         ...candidate,
         status: JobStatus.PROCESSING,
-        attempts: candidate.attempts + 1,
         lockedAt: new Date(),
       };
     }),
@@ -134,17 +138,25 @@ export async function rescheduleJob(job: QueueJob, error: unknown) {
   }
 
   const message = error instanceof Error ? error.message : "Unknown worker error";
-  const nextStatus = job.attempts >= 3 ? JobStatus.FAILED : JobStatus.PENDING;
-  const retryDelayMinutes = Math.min(5 * job.attempts, 30);
+  const attempts = job.attempts + 1;
+  const nextStatus =
+    attempts >= MAX_JOB_ATTEMPTS ? JobStatus.FAILED : JobStatus.PENDING;
+
+  // Exponential backoff (2, 4, 8, 16… minutes, capped at 1h) with up to 30s of
+  // jitter so a provider outage doesn't cause the whole batch to retry in
+  // lockstep. Effective delay is still bounded by the worker's cron cadence.
+  const backoffMinutes = Math.min(2 ** attempts, 60);
+  const jitterMs = Math.floor(Math.random() * 30_000);
 
   return prisma.queueJob.update({
     where: { id: job.id },
     data: {
       status: nextStatus,
+      attempts,
       lastError: message,
       availableAt:
         nextStatus === JobStatus.PENDING
-          ? new Date(Date.now() + retryDelayMinutes * 60_000)
+          ? new Date(Date.now() + backoffMinutes * 60_000 + jitterMs)
           : new Date(),
       lockedAt: null,
     },

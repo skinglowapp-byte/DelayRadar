@@ -1,22 +1,23 @@
 import { NextResponse } from "@/src/lib/next-response";
 
-import { nextDigestRunAt, normalizeTimeZone } from "@/src/lib/digest/schedule";
-import { ensureDailyDigestJob } from "@/src/lib/jobs";
+import { scheduleDueDigests } from "@/src/lib/digest/schedule-due";
 import { prisma } from "@/src/lib/prisma";
+import { isAuthorizedCron } from "@/src/lib/utils";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
-function isAuthorized(request: Request) {
-  const secret = process.env.CRON_SECRET;
-
-  if (!secret) {
-    return false;
+// This route is kept for manual/administrative triggering. On Hobby the digest
+// scheduling is folded into /api/cron/worker to stay within the 2-cron limit,
+// so this is NOT registered as a Vercel cron.
+export async function GET(request: Request) {
+  if (!isAuthorizedCron(request)) {
+    return NextResponse.json(
+      { error: "Unauthorized cron invocation." },
+      { status: 401 },
+    );
   }
 
-  return request.headers.get("authorization") === `Bearer ${secret}`;
-}
-
-export async function GET(request: Request) {
   if (!prisma) {
     return NextResponse.json(
       { error: "DATABASE_URL is required to schedule digests." },
@@ -24,54 +25,7 @@ export async function GET(request: Request) {
     );
   }
 
-  if (!isAuthorized(request)) {
-    return NextResponse.json(
-      { error: "Unauthorized cron invocation." },
-      { status: 401 },
-    );
-  }
+  const result = await scheduleDueDigests();
 
-  const shops = await prisma.shop.findMany({
-    where: {
-      isInstalled: true,
-      slackDestination: {
-        isNot: null,
-      },
-    },
-    include: {
-      slackDestination: true,
-    },
-  });
-
-  let scheduledCount = 0;
-  let alreadyQueuedCount = 0;
-
-  for (const shop of shops) {
-    if (!shop.slackDestination?.webhookUrl.trim()) {
-      continue;
-    }
-
-    const availableAt = nextDigestRunAt({
-      timeZone: normalizeTimeZone(shop.timezone),
-      digestHour: shop.slackDestination.dailyDigestHour,
-    });
-    const result = await ensureDailyDigestJob({
-      shopId: shop.id,
-      availableAt,
-    });
-
-    if (result.alreadyQueued) {
-      alreadyQueuedCount += 1;
-      continue;
-    }
-
-    scheduledCount += 1;
-  }
-
-  return NextResponse.json({
-    ok: true,
-    shopsConsidered: shops.length,
-    scheduledCount,
-    alreadyQueuedCount,
-  });
+  return NextResponse.json({ ok: true, ...result });
 }

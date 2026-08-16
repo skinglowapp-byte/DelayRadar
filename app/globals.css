@@ -491,6 +491,11 @@ textarea {
   border: 1px solid rgba(44, 140, 104, 0.18);
 }
 
+.callout.warn {
+  background: linear-gradient(135deg, rgba(214, 158, 46, 0.16), rgba(255, 255, 255, 0.45));
+  border-color: rgba(214, 158, 46, 0.32);
+}
+
 .detail-grid {
   display: grid;
   gap: 12px;
@@ -826,6 +831,21 @@ textarea {
 
 .onboarding-step.complete {
   color: var(--success);
+}
+
+.onboarding-step-action {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.onboarding-step-action:hover {
+  border-color: var(--accent, rgba(44, 140, 104, 0.6));
+  background: rgba(44, 140, 104, 0.08);
 }
 
 .onboarding-check {

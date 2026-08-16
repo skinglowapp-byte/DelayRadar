@@ -1,7 +1,11 @@
 .env
 .env.local
 .env.development
+.env.development.local
 .env.production
+.vercel/.env.development.local
+twilio_2FA_recovery_code.txt
+*recovery_code*.txt
 .shopify
 .neon
 node_modules

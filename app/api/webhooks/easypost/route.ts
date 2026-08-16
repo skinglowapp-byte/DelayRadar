@@ -21,7 +21,12 @@ export async function POST(request: Request) {
   const idempotencyKey = eventId ? `easypost:${eventId}` : null;
 
   if (!prisma) {
-    return new NextResponse(null, { status: 200 });
+    // Signal failure so EasyPost retries rather than silently dropping the
+    // event — a 200 here would discard the tracking update forever.
+    return NextResponse.json(
+      { error: "Database unavailable." },
+      { status: 503 },
+    );
   }
 
   if (idempotencyKey) {
@@ -38,8 +43,14 @@ export async function POST(request: Request) {
     data: {
       source: WebhookSource.EASYPOST,
       topic: "tracker.updated",
+      externalId: eventId,
       idempotencyKey,
-      headers: Object.fromEntries(request.headers.entries()),
+      // Don't retain the HMAC signature headers — they're spent after
+      // verification and are needless secret retention.
+      headers: {
+        "content-type": request.headers.get("content-type") ?? "",
+        "user-agent": request.headers.get("user-agent") ?? "",
+      },
       payload: (payload ?? {}) as object,
     },
   });

@@ -2,6 +2,10 @@ import { ExceptionType } from "@prisma/client";
 
 export const managedSlackRules = [
   {
+    triggerType: ExceptionType.DELAYED,
+    label: "Delayed in transit",
+  },
+  {
     triggerType: ExceptionType.FAILED_DELIVERY,
     label: "Failed delivery",
   },

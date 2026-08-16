@@ -1,3 +1,14 @@
+export function meta() {
+  return [
+    { title: "Privacy Policy — DelayRadar" },
+    {
+      name: "description",
+      content:
+        "How DelayRadar collects, uses, retains, and deletes store and customer data for delivery-exception monitoring.",
+    },
+  ];
+}
+
 export default function PrivacyPolicyRoute() {
   return (
     <main
@@ -61,25 +72,41 @@ export default function PrivacyPolicyRoute() {
         <li><strong>Slack</strong> — exception alerts are sent to your configured Slack webhook.</li>
       </ul>
 
+      <h2>Where your data is stored (sub-processors)</h2>
+      <p>
+        DelayRadar runs on Vercel (application hosting) and stores data in a
+        Neon PostgreSQL database, both located in the United States. Tracking is
+        performed by EasyPost, and, where you configure them, email is delivered
+        by Postmark or SendGrid and alerts by Slack. Your data is shared with
+        these processors only to provide the service described above.
+      </p>
+
       <h2>Data retention and deletion</h2>
       <p>
-        Your data is retained for as long as the app is installed. When you
-        uninstall DelayRadar, your access token is immediately revoked. If
-        Shopify sends a <em>shop/redact</em> request, all shop data —
-        including shipments, templates, notifications, and notes — is
-        permanently deleted within 48 hours.
+        Store and shipment records are retained for as long as the app is
+        installed. Operational logs are pruned automatically: processed webhook
+        records after 30 days and completed background jobs after 14 days.
       </p>
       <p>
-        Customer personal information (name, email, phone) is scrubbed from
-        shipment records when Shopify sends a <em>customers/redact</em>{" "}
-        request.
+        When you uninstall DelayRadar, your access token is immediately revoked.
+        If Shopify sends a <em>shop/redact</em> request, all data for that shop
+        — including shipments, status events, templates, notifications, notes,
+        queued jobs, and stored webhook payloads — is permanently deleted.
+      </p>
+      <p>
+        When Shopify sends a <em>customers/redact</em> request, that customer&rsquo;s
+        personal information is scrubbed everywhere we hold it: shipment records,
+        notification logs (recipient, subject, and body), and stored tracking
+        event payloads.
       </p>
 
       <h2>Data security</h2>
       <p>
-        Access tokens are encrypted at rest. All API communication uses HTTPS.
-        Webhook payloads are verified using HMAC signatures. Write operations
-        require a verified Shopify session token (JWT).
+        Your Shopify offline access token is encrypted at rest (AES-256-GCM).
+        All API communication uses HTTPS. Inbound webhook payloads are verified
+        using HMAC signatures, and signature headers are not retained. Write
+        operations require a verified Shopify session token (JWT), and every
+        query is scoped to your store.
       </p>
 
       <h2>Your rights</h2>

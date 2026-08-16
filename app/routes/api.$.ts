@@ -1,8 +1,4 @@
-import {
-  type InboundWebhook,
-  ProcessingStatus,
-  WebhookSource,
-} from "@prisma/client";
+import { ProcessingStatus, WebhookSource } from "@prisma/client";
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "react-router";
 
 import { GET as getBootstrap } from "../api/app/bootstrap/route";
@@ -28,6 +24,29 @@ import { authenticate } from "../shopify.server";
 import { prisma } from "@/src/lib/prisma";
 import { ingestShopifyFulfillmentWebhook } from "@/src/lib/processors/shopify-fulfillment";
 import { rateLimit, rateLimitKeyFromRequest } from "@/src/lib/rate-limit";
+
+// Persist only non-sensitive webhook headers for auditing. Never store the
+// HMAC/signature headers or cookies — they are useless after verification and
+// are needless secret/PII retention.
+const AUDIT_HEADER_ALLOWLIST = new Set([
+  "x-shopify-topic",
+  "x-shopify-webhook-id",
+  "x-shopify-api-version",
+  "x-shopify-triggered-at",
+  "x-shopify-shop-domain",
+  "content-type",
+  "user-agent",
+]);
+
+function safeWebhookHeaders(request: Request): Record<string, string> {
+  const headers: Record<string, string> = {};
+  for (const [key, value] of request.headers.entries()) {
+    if (AUDIT_HEADER_ALLOWLIST.has(key.toLowerCase())) {
+      headers[key] = value;
+    }
+  }
+  return headers;
+}
 
 const getRoutes: Record<string, (request: Request) => Promise<Response>> = {
   "/api/app/bootstrap": getBootstrap,
@@ -118,11 +137,43 @@ async function dispatchShopifyTopic(
   }
 
   if (normalizedTopic === "customers/data_request") {
-    // GDPR: log loudly so the merchant can be alerted out-of-band. DelayRadar
-    // stores minimal customer PII (email, phone, name) on Shipment records;
-    // the inboundWebhook row carries the full payload for follow-up export.
+    // GDPR: compile the data we hold about this customer so the merchant can
+    // fulfil the request. DelayRadar has no automated export channel, so we
+    // log a structured, actionable summary (record ids, not raw PII) for the
+    // operator to action within the 30-day window.
+    if (!prisma) return;
+    const requestPayload = payload as {
+      customer?: { email?: string; phone?: string };
+      orders_requested?: number[];
+    };
+    const email = requestPayload.customer?.email;
+    const phone = requestPayload.customer?.phone;
+    const orderIds = (requestPayload.orders_requested ?? []).map((id) =>
+      String(id),
+    );
+
+    const shopRecord = await prisma.shop.findUnique({
+      where: { domain: shop },
+      select: { id: true },
+    });
+
+    const conditions: Array<Record<string, unknown>> = [];
+    if (email) conditions.push({ customerEmail: email });
+    if (phone) conditions.push({ customerPhone: phone });
+    if (orderIds.length > 0) conditions.push({ shopifyOrderId: { in: orderIds } });
+
+    const shipments =
+      shopRecord && conditions.length > 0
+        ? await prisma.shipment.findMany({
+            where: { shopId: shopRecord.id, OR: conditions },
+            select: { id: true, shopifyOrderName: true, trackingNumber: true },
+          })
+        : [];
+
     console.warn(
-      `[gdpr] customers/data_request received for shop=${shop}; awaiting merchant export.`,
+      `[gdpr] customers/data_request shop=${shop} matched ${shipments.length} shipment(s): ${JSON.stringify(
+        shipments,
+      )} — export to the merchant within 30 days.`,
     );
     return;
   }
@@ -150,10 +201,31 @@ async function dispatchShopifyTopic(
     });
     if (!shopRecord) return;
 
-    await prisma.shipment.updateMany({
+    // Find the affected shipments first so we can scrub every table that holds
+    // their PII, not just the Shipment row (matches the privacy policy).
+    const shipments = await prisma.shipment.findMany({
       where: { shopId: shopRecord.id, OR: conditions },
-      data: { customerName: null, customerEmail: null, customerPhone: null },
+      select: { id: true },
     });
+    const shipmentIds = shipments.map((entry) => entry.id);
+
+    await prisma.$transaction([
+      prisma.shipment.updateMany({
+        where: { shopId: shopRecord.id, OR: conditions },
+        data: { customerName: null, customerEmail: null, customerPhone: null },
+      }),
+      // NotificationLog.target holds the customer email; body/subject may echo
+      // their name. Scrub them for the affected shipments.
+      prisma.notificationLog.updateMany({
+        where: { shopId: shopRecord.id, shipmentId: { in: shipmentIds } },
+        data: { target: "[redacted]", subject: null, body: "[redacted]" },
+      }),
+      // StatusEvent.raw carries the provider payload for the shipment.
+      prisma.statusEvent.updateMany({
+        where: { shipmentId: { in: shipmentIds } },
+        data: { raw: {}, message: null },
+      }),
+    ]);
     return;
   }
 
@@ -164,8 +236,18 @@ async function dispatchShopifyTopic(
         select: { id: true },
       });
       if (shopRecord) {
-        // Cascade-delete via onDelete: Cascade on Shop relations.
-        await prisma.shop.delete({ where: { id: shopRecord.id } });
+        // Explicitly delete rows that are only SetNull-linked to Shop (they
+        // would otherwise survive with full customer payloads), then cascade
+        // the rest via onDelete: Cascade on the remaining Shop relations.
+        await prisma.$transaction([
+          prisma.queueJob.deleteMany({ where: { shopId: shopRecord.id } }),
+          prisma.inboundWebhook.deleteMany({
+            where: { OR: [{ shopId: shopRecord.id }, { shopDomain: shop }] },
+          }),
+          prisma.shop.delete({ where: { id: shopRecord.id } }),
+        ]);
+      } else {
+        await prisma.inboundWebhook.deleteMany({ where: { shopDomain: shop } });
       }
     }
     if (session) {
@@ -215,39 +297,64 @@ async function handleShopifyWebhook(request: Request) {
 
   // Audit log: every authenticated Shopify webhook gets a row, including
   // GDPR/uninstall topics that previously had no record.
-  let inbound: InboundWebhook | null = null;
+  let inbound: { id: string } | null = null;
 
   if (prisma && idempotencyKey) {
-    const duplicate = await prisma.inboundWebhook.findUnique({
+    const existing = await prisma.inboundWebhook.findUnique({
       where: { idempotencyKey },
-      select: { id: true },
+      select: { id: true, status: true },
     });
-    if (duplicate) return new Response(null, { status: 200 });
+    if (existing) {
+      // Only short-circuit a delivery we already processed successfully. A row
+      // left at FAILED/PENDING from a prior crash must be reprocessed on
+      // Shopify's retry (same webhook id) rather than silently dropped.
+      if (existing.status === ProcessingStatus.PROCESSED) {
+        return new Response(null, { status: 200 });
+      }
+      inbound = { id: existing.id };
+    }
   }
 
-  if (prisma) {
+  if (prisma && !inbound) {
+    // Attribute the audit row to the shop so per-shop health counts work.
+    const shopRecord = await prisma.shop.findUnique({
+      where: { domain: shop },
+      select: { id: true },
+    });
+
     try {
-      inbound = await prisma.inboundWebhook.create({
+      const created = await prisma.inboundWebhook.create({
         data: {
           source: WebhookSource.SHOPIFY,
           topic: rawTopic || "unknown",
+          shopId: shopRecord?.id ?? null,
           shopDomain: shop,
           idempotencyKey,
-          headers: Object.fromEntries(request.headers.entries()),
+          headers: safeWebhookHeaders(request),
           payload: (payload ?? {}) as object,
         },
       });
+      inbound = { id: created.id };
     } catch (error) {
-      // Concurrent retry: another request created the row first. Treat as duplicate.
+      // Concurrent retry: another request created the row first.
       if (
         error &&
         typeof error === "object" &&
         "code" in error &&
-        (error as { code?: string }).code === "P2002"
+        (error as { code?: string }).code === "P2002" &&
+        idempotencyKey
       ) {
-        return new Response(null, { status: 200 });
+        const existing = await prisma.inboundWebhook.findUnique({
+          where: { idempotencyKey },
+          select: { id: true, status: true },
+        });
+        if (!existing || existing.status === ProcessingStatus.PROCESSED) {
+          return new Response(null, { status: 200 });
+        }
+        inbound = { id: existing.id };
+      } else {
+        throw error;
       }
-      throw error;
     }
   }
 

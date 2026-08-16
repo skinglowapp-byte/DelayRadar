@@ -1,3 +1,14 @@
+export function meta() {
+  return [
+    { title: "Terms of Service — DelayRadar" },
+    {
+      name: "description",
+      content:
+        "DelayRadar terms of service: subscription pricing, data use, and service terms for the Shopify delivery-exception app.",
+    },
+  ];
+}
+
 export default function TermsOfServiceRoute() {
   return (
     <main
@@ -54,7 +65,31 @@ export default function TermsOfServiceRoute() {
         notifications.
       </p>
 
-      <h2>5. Customer Communications</h2>
+      <h2>5. Pricing, Billing, and Refunds</h2>
+      <ul>
+        <li>
+          DelayRadar is offered on a monthly subscription of{" "}
+          <strong>US$19.99 per month</strong>, billed through Shopify Billing
+          and charged to your Shopify account.
+        </li>
+        <li>
+          New installs include a <strong>7-day free trial</strong>. You will not
+          be charged if you uninstall before the trial ends.
+        </li>
+        <li>
+          Subscriptions renew automatically each 30-day billing period until
+          cancelled. You can cancel at any time by uninstalling the App from
+          your Shopify admin; cancellation takes effect at the end of the
+          current billing period.
+        </li>
+        <li>
+          Charges are handled by Shopify under Shopify&rsquo;s billing terms.
+          Except where required by law, subscription fees are non-refundable
+          once a billing period has begun.
+        </li>
+      </ul>
+
+      <h2>6. Customer Communications</h2>
       <p>
         DelayRadar sends emails and Slack messages on your behalf based on the
         rules and templates you configure. You are responsible for ensuring that
@@ -62,7 +97,7 @@ export default function TermsOfServiceRoute() {
         CAN-SPAM, GDPR, and any other relevant regulations.
       </p>
 
-      <h2>6. Service Availability</h2>
+      <h2>7. Service Availability</h2>
       <p>
         We strive to keep DelayRadar available and reliable, but we do not
         guarantee uninterrupted service. The App depends on third-party services
@@ -70,7 +105,7 @@ export default function TermsOfServiceRoute() {
         not liable for delays or failures caused by those services.
       </p>
 
-      <h2>7. Limitation of Liability</h2>
+      <h2>8. Limitation of Liability</h2>
       <p>
         DelayRadar is provided &ldquo;as is&rdquo; without warranties of any kind. To the
         maximum extent permitted by law, we shall not be liable for any
@@ -79,7 +114,7 @@ export default function TermsOfServiceRoute() {
         deliveries, or customer complaints.
       </p>
 
-      <h2>8. Termination</h2>
+      <h2>9. Termination</h2>
       <p>
         You may stop using DelayRadar at any time by uninstalling it from your
         Shopify admin. Upon uninstall, your access token is revoked immediately.
@@ -87,15 +122,25 @@ export default function TermsOfServiceRoute() {
         permanently deleted.
       </p>
 
-      <h2>9. Changes to Terms</h2>
+      <h2>10. Changes to Terms</h2>
       <p>
         We may update these Terms from time to time. Continued use of the App
         after changes are posted constitutes acceptance of the revised Terms.
       </p>
 
-      <h2>10. Contact</h2>
+      <h2>11. Governing Law</h2>
       <p>
-        For questions about these Terms, contact us at{" "}
+        These Terms are governed by the laws of the State of New Jersey, USA,
+        without regard to its conflict-of-laws rules. Any dispute arising from
+        these Terms or your use of the App shall be resolved in the state or
+        federal courts located in New Jersey, and you consent to their
+        jurisdiction.
+      </p>
+
+      <h2>12. Contact</h2>
+      <p>
+        DelayRadar is operated by Saleh &amp; Associates LLC. For questions about
+        these Terms, contact us at{" "}
         <a href="mailto:support@delayradar.io">support@delayradar.io</a>.
       </p>
     </main>

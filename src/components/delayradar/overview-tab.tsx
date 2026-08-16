@@ -7,9 +7,11 @@ import { CarrierCoverageBanner, ShipmentMonitorTable } from "./shipment-monitor"
 export function OverviewTab({
   data,
   onSelectException,
+  onNavigateTab,
 }: {
   data: AppBootstrap | null;
   onSelectException: (id: string) => void;
+  onNavigateTab: (tab: string) => void;
 }) {
   return (
     <>
@@ -31,17 +33,40 @@ export function OverviewTab({
             />
           </div>
           <div className="onboarding-steps">
-            {data.onboarding.steps.map((step) => (
-              <div
-                className={cn("onboarding-step", step.complete && "complete")}
-                key={step.key}
-              >
-                <span className="onboarding-check">
-                  {step.complete ? "✓" : "○"}
-                </span>
-                <span>{step.label}</span>
-              </div>
-            ))}
+            {data.onboarding.steps.map((step) => {
+              const content = (
+                <>
+                  <span className="onboarding-check">
+                    {step.complete ? "✓" : "○"}
+                  </span>
+                  <span>{step.label}</span>
+                </>
+              );
+
+              // Incomplete, actionable steps become buttons that jump to the
+              // relevant tab; completed or non-actionable steps stay static.
+              if (step.tab && !step.complete) {
+                return (
+                  <button
+                    type="button"
+                    className={cn("onboarding-step", "onboarding-step-action")}
+                    key={step.key}
+                    onClick={() => onNavigateTab(step.tab!)}
+                  >
+                    {content}
+                  </button>
+                );
+              }
+
+              return (
+                <div
+                  className={cn("onboarding-step", step.complete && "complete")}
+                  key={step.key}
+                >
+                  {content}
+                </div>
+              );
+            })}
           </div>
         </div>
       ) : null}
