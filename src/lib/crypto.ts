@@ -68,33 +68,7 @@ export function encrypt(plaintext: string): string {
   return ENCRYPTED_PREFIX + Buffer.concat([iv, tag, encrypted]).toString("base64");
 }
 
-/**
- * Decrypt a value previously produced by `encrypt()`. Values without the
- * `enc:v1:` prefix are treated as legacy plaintext and returned as-is. A
- * prefixed value that fails to decrypt THROWS — a corrupt payload or rotated
- * key must surface loudly, not silently return ciphertext that would later be
- * rejected by Shopify as an opaque 401.
- */
-export function decrypt(value: string): string {
-  if (!value.startsWith(ENCRYPTED_PREFIX)) {
-    // Legacy plaintext token stored before encryption was enabled.
-    return value;
-  }
-
-  const key = getEncryptionKey();
-
-  if (!key) {
-    throw new Error(
-      "Encountered an encrypted value but ENCRYPTION_KEY is not configured.",
-    );
-  }
-
-  const buf = Buffer.from(value.slice(ENCRYPTED_PREFIX.length), "base64");
-
-  if (buf.length < IV_LENGTH + TAG_LENGTH + 1) {
-    throw new Error("Encrypted value is malformed (too short).");
-  }
-
+function decryptBuffer(buf: Buffer, key: Buffer): string {
   const iv = buf.subarray(0, IV_LENGTH);
   const tag = buf.subarray(IV_LENGTH, IV_LENGTH + TAG_LENGTH);
   const ciphertext = buf.subarray(IV_LENGTH + TAG_LENGTH);
@@ -105,4 +79,58 @@ export function decrypt(value: string): string {
     decipher.update(ciphertext),
     decipher.final(),
   ]).toString("utf-8");
+}
+
+/**
+ * Decrypt a value previously produced by `encrypt()`.
+ *
+ * - `enc:v1:`-prefixed values are unambiguously ours: a decryption failure
+ *   THROWS so a corrupt payload / rotated key surfaces loudly instead of
+ *   silently returning ciphertext that Shopify would later reject as a 401.
+ * - Legacy values (pre-prefix): tokens encrypted before the prefix existed are
+ *   still valid AES-GCM payloads, so we attempt to decrypt them; genuine
+ *   plaintext tokens (e.g. `shpat_...`) that aren't valid ciphertext are
+ *   returned unchanged.
+ */
+export function decrypt(value: string): string {
+  const key = getEncryptionKey();
+
+  if (value.startsWith(ENCRYPTED_PREFIX)) {
+    if (!key) {
+      throw new Error(
+        "Encountered an encrypted value but ENCRYPTION_KEY is not configured.",
+      );
+    }
+
+    const buf = Buffer.from(value.slice(ENCRYPTED_PREFIX.length), "base64");
+
+    if (buf.length < IV_LENGTH + TAG_LENGTH + 1) {
+      throw new Error("Encrypted value is malformed (too short).");
+    }
+
+    return decryptBuffer(buf, key);
+  }
+
+  // Legacy path: no prefix. Without a key we can't decrypt, so assume plaintext.
+  if (!key) {
+    return value;
+  }
+
+  let buf: Buffer;
+  try {
+    buf = Buffer.from(value, "base64");
+  } catch {
+    return value;
+  }
+
+  if (buf.length < IV_LENGTH + TAG_LENGTH + 1) {
+    return value;
+  }
+
+  try {
+    return decryptBuffer(buf, key);
+  } catch {
+    // Not a valid legacy ciphertext — treat as genuine plaintext token.
+    return value;
+  }
 }
