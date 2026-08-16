@@ -1,7 +1,7 @@
 import { NextResponse } from "@/src/lib/next-response";
 import { z } from "zod";
 
-import { sendEmail } from "@/src/lib/notifications/email";
+import { sendEmail, shopEmailSender } from "@/src/lib/notifications/email";
 import { prisma } from "@/src/lib/prisma";
 import { renderShipmentTemplate } from "@/src/lib/notifications/shipment-template";
 import { requireShopDomain, routeErrorResponse } from "@/src/lib/shopify/route-helpers";
@@ -16,6 +16,7 @@ const templateTestSchema = z.object({
     "AVAILABLE_FOR_PICKUP",
     "LOST_IN_TRANSIT",
     "RETURN_TO_SENDER",
+    "NO_MOVEMENT",
     "OTHER",
   ]),
   subject: z.string().max(160),
@@ -84,6 +85,7 @@ export async function POST(request: Request) {
       subject: rendered.subject,
       textBody: rendered.body,
       htmlBody: toHtmlBody(rendered.body),
+      sender: shopEmailSender(shop),
     });
 
     return NextResponse.json({

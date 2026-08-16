@@ -45,6 +45,13 @@ model Shop {
   lostInTransitThresholdHours Int     @default(168)
   priorityOrderValueThresholdCents Int @default(15000)
   vipTagPattern      String            @default("vip")
+  senderName         String?
+  senderEmail        String?
+  senderVerified     Boolean           @default(false)
+  replyToEmail       String?
+  digestEmailEnabled Boolean           @default(false)
+  digestEmailRecipient String?
+  digestHour         Int               @default(9)
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   shipments          Shipment[]
@@ -265,6 +272,7 @@ enum ExceptionType {
   AVAILABLE_FOR_PICKUP
   LOST_IN_TRANSIT
   RETURN_TO_SENDER
+  NO_MOVEMENT
   OTHER
 }
 

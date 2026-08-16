@@ -1,6 +1,7 @@
 import { NextResponse } from "@/src/lib/next-response";
 
 import { scheduleDueDigests } from "@/src/lib/digest/schedule-due";
+import { sweepNoMovementShipments } from "@/src/lib/processors/no-movement-sweep";
 import { prisma } from "@/src/lib/prisma";
 import { isAuthorizedCron } from "@/src/lib/utils";
 import { drainPendingInboundWebhooks } from "@/src/lib/webhooks/process-inbound";
@@ -53,6 +54,10 @@ export async function GET(request: Request) {
       lastError: "Reset by cron: exceeded 10-minute processing lock.",
     },
   });
+
+  // Promote quiet shipments into NO_MOVEMENT exceptions (and enqueue their
+  // notifications) before draining, so those alerts go out in this same run.
+  const noMovement = await sweepNoMovementShipments();
 
   // Drain the entire inbound + job backlog within the time budget rather than a
   // single fixed batch, so throughput is bounded by wall-clock, not by a hard
@@ -111,6 +116,7 @@ export async function GET(request: Request) {
       totalFailed: failedJobsTotal,
       stuckReset: stuckResetCount.count,
     },
+    noMovement,
     digests,
     pruned: { jobs: prunedJobs.count, webhooks: prunedWebhooks.count },
     checkedAt: new Date().toISOString(),

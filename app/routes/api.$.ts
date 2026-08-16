@@ -9,6 +9,7 @@ import { POST as postManualNotification } from "../api/app/notifications/manual/
 import { POST as postPing } from "../api/app/ping/route";
 import { POST as postNotificationSettings } from "../api/app/settings/notifications/route";
 import { POST as postPrioritySettings } from "../api/app/settings/priority/route";
+import { POST as postSenderSettings } from "../api/app/settings/sender/route";
 import { POST as postSlackSettings } from "../api/app/settings/slack/route";
 import { POST as postSlackTest } from "../api/app/settings/slack/test/route";
 import { POST as postSync } from "../api/app/sync/route";
@@ -62,6 +63,7 @@ const postRoutes: Record<string, (request: Request) => Promise<Response>> = {
   "/api/app/ping": postPing,
   "/api/app/settings/notifications": postNotificationSettings,
   "/api/app/settings/priority": postPrioritySettings,
+  "/api/app/settings/sender": postSenderSettings,
   "/api/app/settings/slack": postSlackSettings,
   "/api/app/settings/slack/test": postSlackTest,
   "/api/app/sync": postSync,

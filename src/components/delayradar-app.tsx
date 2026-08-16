@@ -70,6 +70,12 @@ export function DelayRadarApp({
   const [slackRuleState, setSlackRuleState] = useState<Record<string, boolean>>(
     {},
   );
+  const [senderName, setSenderName] = useState("");
+  const [senderEmail, setSenderEmail] = useState("");
+  const [replyToEmail, setReplyToEmail] = useState("");
+  const [digestEmailEnabled, setDigestEmailEnabled] = useState(false);
+  const [digestEmailRecipient, setDigestEmailRecipient] = useState("");
+  const [emailDigestHour, setEmailDigestHour] = useState("9");
   const [testSendTarget, setTestSendTarget] = useState("");
   const [exceptionSearch, setExceptionSearch] = useState("");
   const [severityFilter, setSeverityFilter] = useState("all");
@@ -117,6 +123,12 @@ export function DelayRadarApp({
       formatThresholdInput(payload.settings.priorityOrderValueThresholdCents),
     );
     setVipTagPattern(payload.settings.vipTagPattern);
+    setSenderName(payload.settings.senderName ?? "");
+    setSenderEmail(payload.settings.senderEmail ?? "");
+    setReplyToEmail(payload.settings.replyToEmail ?? "");
+    setDigestEmailEnabled(payload.settings.digestEmailEnabled);
+    setDigestEmailRecipient(payload.settings.digestEmailRecipient ?? "");
+    setEmailDigestHour(String(payload.settings.emailDigestHour));
     setEmailRuleState(toRuleState(payload.settings.emailRules));
     setSlackRuleState(toRuleState(payload.settings.slackRules));
     setTestSendTarget(payload.shop?.email ?? "");
@@ -568,6 +580,49 @@ export function DelayRadarApp({
             saveError instanceof Error
               ? saveError.message
               : "Failed to save priority settings.",
+          );
+        }
+      })();
+    });
+  }
+
+  function saveSenderSettings() {
+    if (!shopInput || blockDemoWrites()) {
+      return;
+    }
+
+    startTransition(() => {
+      void (async () => {
+        try {
+          setError(null);
+          setNotice(null);
+          const payload = await readJson<{ ok: boolean; senderVerified: boolean }>(
+            "/api/app/settings/sender",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                shop: shopInput,
+                senderName: senderName.trim(),
+                senderEmail: senderEmail.trim(),
+                replyToEmail: replyToEmail.trim(),
+                digestEmailEnabled,
+                digestEmailRecipient: digestEmailRecipient.trim(),
+                emailDigestHour: Number(emailDigestHour),
+              }),
+            },
+          );
+          await refresh();
+          setNotice(
+            senderEmail.trim() && !payload.senderVerified
+              ? "Sender saved. Your address is pending domain verification, so emails send from our domain with your address as reply-to."
+              : "Sender and delivery settings saved.",
+          );
+        } catch (saveError) {
+          setError(
+            saveError instanceof Error
+              ? saveError.message
+              : "Failed to save sender settings.",
           );
         }
       })();
@@ -1036,6 +1091,19 @@ export function DelayRadarApp({
                       health={data?.health ?? null}
                       settings={data?.settings ?? null}
                       isSaving={isSaving}
+                      senderName={senderName}
+                      onSenderNameChange={setSenderName}
+                      senderEmail={senderEmail}
+                      onSenderEmailChange={setSenderEmail}
+                      replyToEmail={replyToEmail}
+                      onReplyToEmailChange={setReplyToEmail}
+                      digestEmailEnabled={digestEmailEnabled}
+                      onDigestEmailEnabledChange={setDigestEmailEnabled}
+                      digestEmailRecipient={digestEmailRecipient}
+                      onDigestEmailRecipientChange={setDigestEmailRecipient}
+                      emailDigestHour={emailDigestHour}
+                      onEmailDigestHourChange={setEmailDigestHour}
+                      onSaveSender={saveSenderSettings}
                       noMovementThresholdHours={noMovementThresholdHours}
                       onNoMovementThresholdHoursChange={setNoMovementThresholdHours}
                       emailRuleState={emailRuleState}

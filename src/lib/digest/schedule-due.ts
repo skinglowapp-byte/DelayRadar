@@ -15,7 +15,7 @@ export async function scheduleDueDigests() {
   const shops = await prisma.shop.findMany({
     where: {
       isInstalled: true,
-      slackDestination: { isNot: null },
+      OR: [{ slackDestination: { isNot: null } }, { digestEmailEnabled: true }],
     },
     include: { slackDestination: true },
   });
@@ -24,13 +24,24 @@ export async function scheduleDueDigests() {
   let alreadyQueuedCount = 0;
 
   for (const shop of shops) {
-    if (!shop.slackDestination?.webhookUrl.trim()) {
+    const hasSlack = Boolean(shop.slackDestination?.webhookUrl.trim());
+    const hasEmail =
+      shop.digestEmailEnabled &&
+      Boolean(shop.digestEmailRecipient?.trim() || shop.email?.trim());
+
+    if (!hasSlack && !hasEmail) {
       continue;
     }
 
+    // Prefer the Slack digest hour when Slack is configured; otherwise use the
+    // shop-level digest hour for the email digest.
+    const digestHour = hasSlack
+      ? shop.slackDestination!.dailyDigestHour
+      : shop.digestHour;
+
     const availableAt = nextDigestRunAt({
       timeZone: normalizeTimeZone(shop.timezone),
-      digestHour: shop.slackDestination.dailyDigestHour,
+      digestHour,
     });
     const result = await ensureDailyDigestJob({
       shopId: shop.id,

@@ -12,6 +12,19 @@ export function SettingsTab({
   health,
   settings,
   isSaving,
+  senderName,
+  onSenderNameChange,
+  senderEmail,
+  onSenderEmailChange,
+  replyToEmail,
+  onReplyToEmailChange,
+  digestEmailEnabled,
+  onDigestEmailEnabledChange,
+  digestEmailRecipient,
+  onDigestEmailRecipientChange,
+  emailDigestHour,
+  onEmailDigestHourChange,
+  onSaveSender,
   noMovementThresholdHours,
   onNoMovementThresholdHoursChange,
   emailRuleState,
@@ -41,6 +54,19 @@ export function SettingsTab({
   health: AppBootstrap["health"] | null;
   settings: AppBootstrap["settings"] | null;
   isSaving: boolean;
+  senderName: string;
+  onSenderNameChange: (value: string) => void;
+  senderEmail: string;
+  onSenderEmailChange: (value: string) => void;
+  replyToEmail: string;
+  onReplyToEmailChange: (value: string) => void;
+  digestEmailEnabled: boolean;
+  onDigestEmailEnabledChange: (value: boolean) => void;
+  digestEmailRecipient: string;
+  onDigestEmailRecipientChange: (value: string) => void;
+  emailDigestHour: string;
+  onEmailDigestHourChange: (value: string) => void;
+  onSaveSender: () => void;
   noMovementThresholdHours: string;
   onNoMovementThresholdHoursChange: (value: string) => void;
   emailRuleState: Record<string, boolean>;
@@ -128,6 +154,134 @@ export function SettingsTab({
           ) : null}
         </div>
       ) : null}
+      <div className="stack">
+        <div className="toolbar">
+          <div>
+            <span className="eyebrow">Sender &amp; delivery</span>
+            <h2 className="section-title">Email sender identity</h2>
+          </div>
+          <span
+            className={cn(
+              "pill",
+              settings?.senderVerified ? "good" : "muted",
+            )}
+          >
+            {settings?.senderEmail
+              ? settings?.senderVerified
+                ? "Custom sender verified"
+                : "Pending verification"
+              : "Using shared sender"}
+          </span>
+        </div>
+        <div className="form-grid">
+          <label className="field">
+            <span className="field-label">Sender name</span>
+            <input
+              className="input"
+              placeholder="Acme Support"
+              value={senderName}
+              onChange={(event) => onSenderNameChange(event.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span className="field-label">Sender email (From)</span>
+            <input
+              className="input"
+              type="email"
+              placeholder="support@yourbrand.com"
+              value={senderEmail}
+              onChange={(event) => onSenderEmailChange(event.target.value)}
+            />
+            <span className="helper-text">
+              Used as the From address only after the domain is verified with
+              our email provider. Until then, emails send from our shared domain
+              with your reply-to address below.
+            </span>
+          </label>
+          <label className="field">
+            <span className="field-label">Reply-to email</span>
+            <input
+              className="input"
+              type="email"
+              placeholder="replies@yourbrand.com"
+              value={replyToEmail}
+              onChange={(event) => onReplyToEmailChange(event.target.value)}
+            />
+            <span className="helper-text">
+              Where customer replies go. Works immediately, no verification
+              needed.
+            </span>
+          </label>
+        </div>
+        <div className="form-grid">
+          <label className="toggle-card" aria-label="Email me the daily digest">
+            <input
+              type="checkbox"
+              checked={digestEmailEnabled}
+              onChange={(event) =>
+                onDigestEmailEnabledChange(event.target.checked)
+              }
+            />
+            <div className="stack tight">
+              <strong>Email me the daily digest</strong>
+              <span className="microcopy">
+                Send the daily exception digest by email (in addition to Slack,
+                if configured).
+              </span>
+            </div>
+          </label>
+          <label className="field">
+            <span className="field-label">Digest recipient</span>
+            <input
+              className="input"
+              type="email"
+              placeholder={settings?.senderEmail ?? "you@yourbrand.com"}
+              value={digestEmailRecipient}
+              onChange={(event) =>
+                onDigestEmailRecipientChange(event.target.value)
+              }
+            />
+            <span className="helper-text">
+              Defaults to your store email if left blank.
+            </span>
+          </label>
+          <label className="field">
+            <span className="field-label">Email digest hour</span>
+            <select
+              className="select"
+              value={emailDigestHour}
+              onChange={(event) => onEmailDigestHourChange(event.target.value)}
+            >
+              {Array.from({ length: 24 }, (_, hour) => (
+                <option key={hour} value={String(hour)}>
+                  {hour === 0
+                    ? "12:00 AM"
+                    : hour < 12
+                      ? `${hour}:00 AM`
+                      : hour === 12
+                        ? "12:00 PM"
+                        : `${hour - 12}:00 PM`}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="split-inline">
+          <span className="microcopy">
+            Custom From requires domain verification with our email provider —
+            contact support to verify yours.
+          </span>
+          <button
+            className="button"
+            type="button"
+            onClick={onSaveSender}
+            disabled={isSaving}
+          >
+            Save sender settings
+          </button>
+        </div>
+      </div>
+
       <div className="stack">
         <div className="toolbar">
           <div>

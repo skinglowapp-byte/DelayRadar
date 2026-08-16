@@ -9,6 +9,8 @@
     "start": "react-router-serve ./build/server/index.js",
     "setup": "prisma generate && prisma migrate deploy",
     "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "react-router typegen && tsc --noEmit",
     "config:link": "shopify app config link",
     "config:use": "shopify app config use",
@@ -61,7 +63,8 @@
     "tsx": "latest",
     "typescript": "latest",
     "vite": "^6.3.6",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^2.1.9"
   },
   "trustedDependencies": [
     "@shopify/plugin-cloudflare"

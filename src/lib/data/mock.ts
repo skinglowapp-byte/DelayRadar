@@ -717,6 +717,13 @@ export function getDemoAppData(prefilledShop = ""): AppBootstrap {
       lostInTransitThresholdHours: 168,
       priorityOrderValueThresholdCents: 15000,
       vipTagPattern: "vip",
+      senderName: "Aurora Threads Support",
+      senderEmail: "support@aurorathreads.example",
+      senderVerified: true,
+      replyToEmail: "support@aurorathreads.example",
+      digestEmailEnabled: true,
+      digestEmailRecipient: "ops@aurorathreads.example",
+      emailDigestHour: 9,
       emailRules: [
         {
           triggerType: "DELAYED",
@@ -834,6 +841,13 @@ export function getInstallState(prefilledShop = ""): AppBootstrap {
       lostInTransitThresholdHours: 168,
       priorityOrderValueThresholdCents: 15000,
       vipTagPattern: "vip",
+      senderName: "Aurora Threads Support",
+      senderEmail: "support@aurorathreads.example",
+      senderVerified: true,
+      replyToEmail: "support@aurorathreads.example",
+      digestEmailEnabled: true,
+      digestEmailRecipient: "ops@aurorathreads.example",
+      emailDigestHour: 9,
       emailRules: [
         {
           triggerType: "DELAYED",

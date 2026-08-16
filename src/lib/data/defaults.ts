@@ -44,6 +44,14 @@ const defaultTemplates: DefaultTemplate[] = [
     body:
       "Hi {{customer_first_name}}, your package is waiting at the pickup location. Please collect it before the hold window expires.",
   },
+  {
+    name: "No tracking movement",
+    channel: NotificationChannel.EMAIL,
+    triggerType: ExceptionType.NO_MOVEMENT,
+    subject: "An update on your order {{order_name}}",
+    body:
+      "Hi {{customer_first_name}}, your order {{order_name}} hasn’t shown a carrier scan in a while. We’re actively checking with {{carrier_name}} and will follow up as soon as it’s moving again.",
+  },
 ];
 
 export async function ensureDefaultAutomation(shopId: string) {

@@ -21,6 +21,10 @@ export const managedSlackRules = [
     triggerType: ExceptionType.RETURN_TO_SENDER,
     label: "Return to sender",
   },
+  {
+    triggerType: ExceptionType.NO_MOVEMENT,
+    label: "No tracking movement",
+  },
 ] as const;
 
 export const managedSlackRuleTypes = managedSlackRules.map(

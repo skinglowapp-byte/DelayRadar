@@ -15,7 +15,7 @@ import { shopifyAdminGraphql } from "@/src/lib/shopify/admin";
 // Shopify webhooks send bare numeric IDs while the Admin GraphQL API sends
 // GIDs (gid://shopify/Order/123). Normalize both to the numeric string so the
 // two ingest paths write the same value and GDPR redaction / dedupe match.
-function toNumericId(value: string | number | null | undefined): string | null {
+export function toNumericId(value: string | number | null | undefined): string | null {
   if (value === null || value === undefined || value === "") {
     return null;
   }

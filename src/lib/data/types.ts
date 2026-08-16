@@ -156,6 +156,13 @@ export type AppSettingsSummary = {
   lostInTransitThresholdHours: number;
   priorityOrderValueThresholdCents: number;
   vipTagPattern: string;
+  senderName: string | null;
+  senderEmail: string | null;
+  senderVerified: boolean;
+  replyToEmail: string | null;
+  digestEmailEnabled: boolean;
+  digestEmailRecipient: string | null;
+  emailDigestHour: number;
   emailRules: NotificationRuleSummary[];
   slackRules: NotificationRuleSummary[];
 };

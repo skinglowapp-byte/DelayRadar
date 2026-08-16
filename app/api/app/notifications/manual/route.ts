@@ -5,7 +5,7 @@ import {
 import { NextResponse } from "@/src/lib/next-response";
 import { z } from "zod";
 
-import { sendEmail } from "@/src/lib/notifications/email";
+import { sendEmail, shopEmailSender } from "@/src/lib/notifications/email";
 import { renderShipmentTemplate } from "@/src/lib/notifications/shipment-template";
 import { prisma } from "@/src/lib/prisma";
 import { requireShopDomain, routeErrorResponse } from "@/src/lib/shopify/route-helpers";
@@ -87,6 +87,7 @@ export async function POST(request: Request) {
         subject: rendered.subject,
         textBody: rendered.body,
         htmlBody: toHtmlBody(rendered.body),
+        sender: shopEmailSender(shop),
       });
 
       const now = new Date();

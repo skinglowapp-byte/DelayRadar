@@ -7,7 +7,7 @@ import {
 
 import type { QueueJob } from "@prisma/client";
 
-import { sendEmail } from "@/src/lib/notifications/email";
+import { sendEmail, shopEmailSender } from "@/src/lib/notifications/email";
 import { renderShipmentTemplate } from "@/src/lib/notifications/shipment-template";
 import { sendSlackMessage } from "@/src/lib/notifications/slack";
 import { startOfLocalDay } from "@/src/lib/digest/schedule";
@@ -160,6 +160,7 @@ async function processNotificationJob(shipmentId: string) {
           subject,
           textBody: body,
           htmlBody: toHtmlBody(body),
+          sender: shopEmailSender(shipment.shop),
         });
 
         await prisma.notificationLog.create({
@@ -297,33 +298,21 @@ async function processDailyDigestJob(input: {
     },
   });
 
-  if (!shop?.slackDestination?.webhookUrl) {
+  if (!shop) {
     return;
   }
 
-  if (!input.force) {
-    // Dedupe within the shop's own local day, not the UTC day — otherwise a
-    // 9pm-ET digest and a 9am-ET digest fall in different UTC days and a shop
-    // can receive two (or a suppressed) digest.
-    const startOfDay = startOfLocalDay(shop.timezone);
+  const slackWebhookUrl = shop.slackDestination?.webhookUrl?.trim() || null;
+  const digestEmailRecipient = shop.digestEmailEnabled
+    ? shop.digestEmailRecipient?.trim() || shop.email?.trim() || null
+    : null;
 
-    const existingDigest = await prisma.notificationLog.findFirst({
-      where: {
-        shopId: shop.id,
-        shipmentId: null,
-        channel: NotificationChannel.SLACK,
-        status: NotificationDeliveryStatus.SENT,
-        subject: "DelayRadar daily digest",
-        sentAt: {
-          gte: startOfDay,
-        },
-      },
-    });
-
-    if (existingDigest) {
-      return;
-    }
+  // Nothing to deliver to.
+  if (!slackWebhookUrl && !digestEmailRecipient) {
+    return;
   }
+
+  const notifyHighRiskOnly = shop.slackDestination?.notifyHighRiskOnly ?? false;
 
   const noMovementThresholdHours =
     shop.noMovementThresholdHours ?? DEFAULT_NO_MOVEMENT_THRESHOLD_HOURS;
@@ -425,9 +414,7 @@ async function processDailyDigestJob(input: {
     .filter((entry) =>
       // Apply the noise filter on the boosted score, consistently for both
       // explicit exceptions and no-movement entries.
-      shop.slackDestination?.notifyHighRiskOnly
-        ? entry.effectiveRiskScore >= 70
-        : true,
+      notifyHighRiskOnly ? entry.effectiveRiskScore >= 70 : true,
     )
     .sort((left, right) => {
       if (right.effectiveRiskScore !== left.effectiveRiskScore) {
@@ -470,35 +457,114 @@ async function processDailyDigestJob(input: {
     ...lines,
   ].join("\n");
 
-  try {
-    await sendSlackMessage(shop.slackDestination.webhookUrl, digestText);
+  const DIGEST_SUBJECT = "DelayRadar daily digest";
+  const startOfDay = startOfLocalDay(shop.timezone);
 
-    await prisma.notificationLog.create({
-      data: {
-        shopId: shop.id,
-        channel: NotificationChannel.SLACK,
-        target: slackTarget(shop.slackDestination.channelLabel),
+  // Per-channel same-local-day dedupe: a channel that already delivered today
+  // is skipped, but the other channel can still send.
+  async function alreadySentToday(channel: NotificationChannel) {
+    if (input.force || !prisma) {
+      return false;
+    }
+    const existing = await prisma.notificationLog.findFirst({
+      where: {
+        shopId: shop!.id,
+        shipmentId: null,
+        channel,
         status: NotificationDeliveryStatus.SENT,
-        subject: "DelayRadar daily digest",
-        body: digestText,
-        sentAt: new Date(),
+        subject: DIGEST_SUBJECT,
+        sentAt: { gte: startOfDay },
       },
+      select: { id: true },
     });
-  } catch (error) {
-    await prisma.notificationLog.create({
-      data: {
-        shopId: shop.id,
-        channel: NotificationChannel.SLACK,
-        target: slackTarget(shop.slackDestination.channelLabel),
-        status: NotificationDeliveryStatus.FAILED,
-        subject: "DelayRadar daily digest",
-        body: digestText,
-        errorMessage:
-          error instanceof Error ? error.message : "Slack digest delivery failed.",
-      },
-    });
+    return Boolean(existing);
+  }
 
-    throw error;
+  let lastError: unknown = null;
+
+  // Slack channel
+  if (slackWebhookUrl && !(await alreadySentToday(NotificationChannel.SLACK))) {
+    const target = slackTarget(shop.slackDestination?.channelLabel);
+    try {
+      await sendSlackMessage(slackWebhookUrl, digestText);
+      await prisma.notificationLog.create({
+        data: {
+          shopId: shop.id,
+          channel: NotificationChannel.SLACK,
+          target,
+          status: NotificationDeliveryStatus.SENT,
+          subject: DIGEST_SUBJECT,
+          body: digestText,
+          sentAt: new Date(),
+        },
+      });
+    } catch (error) {
+      lastError = error;
+      await prisma.notificationLog.create({
+        data: {
+          shopId: shop.id,
+          channel: NotificationChannel.SLACK,
+          target,
+          status: NotificationDeliveryStatus.FAILED,
+          subject: DIGEST_SUBJECT,
+          body: digestText,
+          errorMessage:
+            error instanceof Error ? error.message : "Slack digest delivery failed.",
+        },
+      });
+    }
+  }
+
+  // Email channel
+  if (
+    digestEmailRecipient &&
+    !(await alreadySentToday(NotificationChannel.EMAIL))
+  ) {
+    const subject = `${DIGEST_SUBJECT} — ${shop.shopName ?? shop.domain}`;
+    try {
+      const delivery = await sendEmail({
+        to: digestEmailRecipient,
+        subject,
+        textBody: digestText,
+        htmlBody: toHtmlBody(digestText),
+        sender: shopEmailSender(shop),
+      });
+      await prisma.notificationLog.create({
+        data: {
+          shopId: shop.id,
+          channel: NotificationChannel.EMAIL,
+          target: digestEmailRecipient,
+          status:
+            delivery.status === "sent"
+              ? NotificationDeliveryStatus.SENT
+              : NotificationDeliveryStatus.SKIPPED,
+          subject: DIGEST_SUBJECT,
+          body: digestText,
+          externalMessageId: delivery.externalMessageId,
+          sentAt: delivery.status === "sent" ? new Date() : null,
+        },
+      });
+    } catch (error) {
+      lastError = error;
+      await prisma.notificationLog.create({
+        data: {
+          shopId: shop.id,
+          channel: NotificationChannel.EMAIL,
+          target: digestEmailRecipient,
+          status: NotificationDeliveryStatus.FAILED,
+          subject: DIGEST_SUBJECT,
+          body: digestText,
+          errorMessage:
+            error instanceof Error ? error.message : "Email digest delivery failed.",
+        },
+      });
+    }
+  }
+
+  // Surface a delivery failure so the job retries, but only after both
+  // channels have been attempted and logged.
+  if (lastError) {
+    throw lastError;
   }
 }
 

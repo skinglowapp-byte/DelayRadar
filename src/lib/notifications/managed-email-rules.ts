@@ -17,6 +17,10 @@ export const managedEmailRules = [
     triggerType: ExceptionType.AVAILABLE_FOR_PICKUP,
     label: "Available for pickup",
   },
+  {
+    triggerType: ExceptionType.NO_MOVEMENT,
+    label: "No tracking movement",
+  },
 ] as const;
 
 export const managedEmailRuleTypes = managedEmailRules.map(
