@@ -139,6 +139,8 @@ export function emailRuleDescription(triggerType: string) {
       return "Auto-send when the carrier needs address confirmation.";
     case "AVAILABLE_FOR_PICKUP":
       return "Auto-send pickup reminders before the hold window expires.";
+    case "NO_MOVEMENT":
+      return "Auto-send an update when a shipment stops scanning past your no-movement threshold.";
     default:
       return "Auto-send proactive customer email updates.";
   }
@@ -154,6 +156,8 @@ export function slackRuleDescription(triggerType: string) {
       return "Escalate likely lost parcels into Slack for refund or resend review.";
     case "RETURN_TO_SENDER":
       return "Alert when the carrier has started sending the parcel back upstream.";
+    case "NO_MOVEMENT":
+      return "Escalate shipments that have stopped scanning so the team can chase the carrier.";
     default:
       return "Alert the team for this exception type in Slack.";
   }
@@ -181,6 +185,8 @@ export function messageModeDescription(triggerType: string) {
       return "Set expectations while support decides whether to resend, refund, or wait.";
     case "DELAYED":
       return "Keep the customer informed without asking them to do anything yet.";
+    case "NO_MOVEMENT":
+      return "Reassure the customer that you’re chasing a stalled shipment before they ask.";
     default:
       return "Share a proactive shipment update without creating unnecessary urgency.";
   }

@@ -60,7 +60,9 @@ export function evaluateRecommendation(
 
   const isNoMovement =
     exceptionType === "No Tracking Movement" ||
-    exceptionType === "NO_TRACKING_MOVEMENT";
+    exceptionType === "NO_TRACKING_MOVEMENT" ||
+    exceptionType === "NO_MOVEMENT" ||
+    exceptionType === "No Movement";
 
   // Rule 1: Lost in transit or severe no-movement past lost threshold
   if (

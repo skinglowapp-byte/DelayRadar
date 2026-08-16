@@ -318,9 +318,13 @@ export function DelayRadarApp({
     return false;
   }
 
+  // Refresh after a mutation updates the server-derived data (tables, health,
+  // metrics) but does NOT repopulate the form fields — those already hold the
+  // just-saved values, and clobbering them would discard unsaved edits in other
+  // sections (e.g. a half-written template) after any save.
   async function refresh() {
     const payload = await fetchBootstrap(shopInput);
-    applyBootstrap(payload, templateId);
+    setData(payload);
   }
 
   function previewDemoShop() {

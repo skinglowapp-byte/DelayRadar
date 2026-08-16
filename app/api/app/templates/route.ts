@@ -16,6 +16,7 @@ const templateSchema = z.object({
     "AVAILABLE_FOR_PICKUP",
     "LOST_IN_TRANSIT",
     "RETURN_TO_SENDER",
+    "NO_MOVEMENT",
     "OTHER",
   ]),
   subject: z.string().max(160),
