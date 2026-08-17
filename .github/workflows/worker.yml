@@ -1,0 +1,62 @@
+name: Drain worker queue
+
+# Vercel's Hobby plan allows only two cron jobs, once daily each, which puts a
+# worst-case ~12h delay between a delivery exception happening and the merchant
+# or customer hearing about it — long enough that the alert is worthless.
+#
+# This drives the same endpoint far more often at no cost. The Vercel crons in
+# vercel.json are deliberately left in place as a backstop for when a scheduled
+# run here is dropped.
+#
+# Cadence note: GitHub's free tier for private repositories is 2,000 minutes a
+# month and bills each job rounded up to a whole minute, so every 30 minutes
+# (~1,440 runs) fits with headroom while every 15 would not. Scheduled runs are
+# also best-effort and can be delayed by several minutes under load. If you want
+# a tighter, more punctual cadence for free, point cron-job.org at the same URL
+# with the same Authorization header — it supports 1-minute intervals — and
+# delete this file.
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+# Never let a slow run overlap the next tick. The worker claims jobs with a
+# lock, so an overlap is survivable, but queueing them up is pointless work.
+concurrency:
+  group: delayradar-worker
+  cancel-in-progress: false
+
+jobs:
+  drain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger worker
+        env:
+          CRON_SECRET: ${{ secrets.DELAYRADAR_CRON_SECRET }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CRON_SECRET}" ]; then
+            echo "DELAYRADAR_CRON_SECRET is not set in repository secrets." >&2
+            exit 1
+          fi
+
+          # Capture the body and status separately so a failure shows what the
+          # endpoint actually said instead of just a status code.
+          http_status=$(curl -sS \
+            --max-time 120 \
+            -o response.json \
+            -w '%{http_code}' \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            https://www.delayradar.io/api/cron/worker)
+
+          echo "HTTP ${http_status}"
+          cat response.json
+          echo
+
+          if [ "${http_status}" != "200" ]; then
+            echo "Worker drain failed with HTTP ${http_status}." >&2
+            exit 1
+          fi

@@ -2,6 +2,7 @@ import { decrypt } from "@/src/lib/crypto";
 import { prisma } from "@/src/lib/prisma";
 
 import { shopifyAdminGraphql } from "./admin";
+import { withRevocationHandling } from "./revocation";
 
 // Under Managed Pricing, Shopify owns the plans and the checkout; the app is
 // forbidden from calling the Billing API. Reading the installation's active
@@ -63,17 +64,23 @@ export async function syncShopPlan(shopId: string): Promise<string | null> {
   }
 
   // Tokens are stored encrypted at rest (see src/lib/shopify/oauth.ts).
-  const planName = await fetchActivePlanName({
-    shop: shop.domain,
-    accessToken: decrypt(shop.offlineAccessToken),
-  });
+  const result = await withRevocationHandling(shop.id, () =>
+    fetchActivePlanName({
+      shop: shop.domain,
+      accessToken: decrypt(shop.offlineAccessToken!),
+    }),
+  );
+
+  if (!result.ok) {
+    return null;
+  }
 
   await prisma.shop.update({
     where: { id: shop.id },
-    data: { planName, planSyncedAt: new Date() },
+    data: { planName: result.value, planSyncedAt: new Date() },
   });
 
-  return planName;
+  return result.value;
 }
 
 const PLAN_REFRESH_INTERVAL_MS = 24 * 3600_000;

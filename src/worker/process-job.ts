@@ -19,6 +19,7 @@ import {
 } from "@/src/lib/plans";
 import { backfillRecentShipments } from "@/src/lib/processors/shopify-fulfillment";
 import { prisma } from "@/src/lib/prisma";
+import { withRevocationHandling } from "@/src/lib/shopify/revocation";
 import { createEasyPostTracker } from "@/src/lib/tracking/easypost";
 import {
   checkpointDate,
@@ -627,7 +628,11 @@ export async function processQueueJob(job: QueueJob) {
     }
     case JobType.BACKFILL_SHIPMENTS: {
       const shopId = String(payload.shopId ?? job.shopId ?? "");
-      await backfillRecentShipments(shopId);
+      // A revoked token is a permanent condition, so let it retire the shop
+      // instead of failing the job through all of its retries.
+      await withRevocationHandling(shopId, () =>
+        backfillRecentShipments(shopId),
+      );
       return;
     }
     case JobType.SEND_DAILY_DIGEST: {

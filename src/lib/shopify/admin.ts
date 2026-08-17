@@ -1,5 +1,17 @@
 const SHOPIFY_API_VERSION = "2025-10";
 
+// Shopify answers 401 for a token it no longer recognises, which in practice
+// means the app was uninstalled (or the token was otherwise revoked) without us
+// ever receiving the app/uninstalled webhook. Callers need to tell that apart
+// from a transient failure: retrying a revoked token never succeeds, and a Shop
+// row left marked installed makes the dashboard and every sweep lie.
+export class ShopifyTokenRevokedError extends Error {
+  constructor(shop: string) {
+    super(`Shopify rejected the stored access token for ${shop}.`);
+    this.name = "ShopifyTokenRevokedError";
+  }
+}
+
 export async function shopifyAdminGraphql<T>(input: {
   shop: string;
   accessToken: string;
@@ -20,6 +32,10 @@ export async function shopifyAdminGraphql<T>(input: {
       }),
     },
   );
+
+  if (response.status === 401) {
+    throw new ShopifyTokenRevokedError(input.shop);
+  }
 
   if (!response.ok) {
     throw new Error(`Shopify Admin API failed with ${response.status}`);
