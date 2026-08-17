@@ -66,7 +66,7 @@ Tip: on macOS, Shift-Cmd-4 then Space to grab a clean window; scale to 1600×900
 
 ### Pricing
 - Plan name: **Monthly**
-- Price: **$19.99 / month**
+- Price: **$9.99 / month**
 - Free trial: **7 days**
 - (Matches the billing block in `app/shopify.server.ts` and the /terms page.)
 

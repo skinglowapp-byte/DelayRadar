@@ -69,7 +69,7 @@ export default function TermsOfServiceRoute() {
       <ul>
         <li>
           DelayRadar is offered on a monthly subscription of{" "}
-          <strong>US$19.99 per month</strong>, billed through Shopify Billing
+          <strong>US$9.99 per month</strong>, billed through Shopify Billing
           and charged to your Shopify account.
         </li>
         <li>

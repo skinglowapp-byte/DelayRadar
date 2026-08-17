@@ -50,7 +50,7 @@ const faqs = [
   },
   {
     q: "How much does it cost?",
-    a: "$19.99/month with a 7-day free trial, billed through Shopify. Cancel anytime by uninstalling.",
+    a: "$9.99/month with a 7-day free trial, billed through Shopify. Cancel anytime by uninstalling.",
   },
   {
     q: "Which carriers are supported?",
@@ -158,7 +158,7 @@ export function MarketingLanding() {
             </button>
           </form>
           <p className="lp-hero-note">
-            <strong>$19.99/mo</strong> · 7-day free trial ·{" "}
+            <strong>$9.99/mo</strong> · 7-day free trial ·{" "}
             <a href="/demo">see a live demo →</a>
           </p>
         </div>
@@ -215,7 +215,7 @@ export function MarketingLanding() {
         <h2 className="lp-section-title">One simple plan.</h2>
         <div className="lp-pricing">
           <div className="lp-price-head">
-            <span className="lp-price-amount">$19.99</span>
+            <span className="lp-price-amount">$9.99</span>
             <span className="lp-price-period">/ month</span>
           </div>
           <p className="lp-price-trial">7-day free trial · cancel anytime</p>

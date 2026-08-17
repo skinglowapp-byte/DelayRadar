@@ -31,7 +31,7 @@ const shopify = shopifyApp({
       trialDays: 7,
       lineItems: [
         {
-          amount: 19.99,
+          amount: 9.99,
           currencyCode: "USD",
           interval: BillingInterval.Every30Days,
         },

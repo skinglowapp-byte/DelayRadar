@@ -49,7 +49,7 @@ export function InstallPanel({
           Preview with demo shop
         </button>
         <p className="microcopy" style={{ marginTop: "0.75rem" }}>
-          <strong>$19.99/month</strong> · 7-day free trial · cancel anytime by
+          <strong>$9.99/month</strong> · 7-day free trial · cancel anytime by
           uninstalling.
         </p>
         <p className="microcopy">

@@ -9,7 +9,7 @@ export function meta() {
     {
       name: "description",
       content:
-        "DelayRadar catches delivery delays, failed deliveries, and lost packages before they become WISMO tickets. For Shopify stores shipping 200–5,000 orders/month. $19.99/mo with a 7-day free trial.",
+        "DelayRadar catches delivery delays, failed deliveries, and lost packages before they become WISMO tickets. For Shopify stores shipping 200–5,000 orders/month. $9.99/mo with a 7-day free trial.",
     },
   ];
 }
