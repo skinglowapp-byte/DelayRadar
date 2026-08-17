@@ -89,7 +89,7 @@ const PLAN_REFRESH_INTERVAL_MS = 24 * 3600_000;
 // rather than a request path so a Shopify outage slows nobody's dashboard.
 export async function syncStalePlans(limit = 25) {
   if (!prisma) {
-    return { checked: 0, updated: 0, failed: 0 };
+    return { checked: 0, updated: 0, revoked: 0, failed: 0 };
   }
 
   const cutoff = new Date(Date.now() - PLAN_REFRESH_INTERVAL_MS);
@@ -104,17 +104,31 @@ export async function syncStalePlans(limit = 25) {
   });
 
   let updated = 0;
+  let revoked = 0;
   let failed = 0;
 
   for (const shop of shops) {
     try {
+      // syncShopPlan returns null both for "no active subscription" and for
+      // "token was revoked, shop retired". Re-read the flag to tell them
+      // apart, so a run that quietly retired every install doesn't report
+      // itself as having successfully updated them.
       await syncShopPlan(shop.id);
-      updated++;
+      const after = await prisma.shop.findUnique({
+        where: { id: shop.id },
+        select: { isInstalled: true },
+      });
+
+      if (after?.isInstalled) {
+        updated++;
+      } else {
+        revoked++;
+      }
     } catch (error) {
       failed++;
       console.error(`Plan sync failed for shop ${shop.id}:`, error);
     }
   }
 
-  return { checked: shops.length, updated, failed };
+  return { checked: shops.length, updated, revoked, failed };
 }
