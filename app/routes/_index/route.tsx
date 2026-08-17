@@ -5,11 +5,11 @@ import { MarketingLanding } from "@/src/components/marketing-landing";
 
 export function meta() {
   return [
-    { title: "DelayRadar — Delivery exception monitoring for Shopify" },
+    { title: "DelayRadar — Delivery exception recovery for Shopify" },
     {
       name: "description",
       content:
-        "DelayRadar catches delivery delays, failed deliveries, and lost packages before they become WISMO tickets. For Shopify stores shipping 200–5,000 orders/month. $9.99/mo with a 7-day free trial.",
+        "Keep your tracking app. DelayRadar handles the deliveries that fail — it catches delays, failed attempts, and lost packages, contacts the customer before they contact you, and tells your team what to do next. For Shopify stores shipping 200–5,000 orders/month.",
     },
   ];
 }

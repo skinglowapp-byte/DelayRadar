@@ -23,30 +23,33 @@ DelayRadar
 
 ### App card subtitle / tagline (62 char max)
 ```
-Catch delivery delays before they become support tickets
+Keep your tracking app. We rescue the deliveries that fail.
 ```
 
 ### App introduction (100 char max — one sentence)
 ```
-Monitor every shipment for delays and failed deliveries, and message customers before they ask.
+Recover failed deliveries: detect the exception, reach the customer first, act before they ask.
 ```
 
 ### App details (500 char max)
 ```
-DelayRadar is the exception layer on top of your existing shipping stack. It watches every fulfillment for delays, failed deliveries, address issues, no-movement, and lost-in-transit — then helps you reach the customer first with proactive email. High-risk exceptions escalate to Slack, a daily digest keeps your team aligned, and priority rules surface VIP and high-value orders. Read-only access, tracking-first on EasyPost, and it works alongside ShipStation, Shippo, or whatever you already use.
+Your tracking app is built for the shipment that arrives. DelayRadar is built for the one that doesn't. It watches every fulfillment for delays, failed attempts, address issues, no-movement, and lost-in-transit, ranks each by what the failure will actually cost you, contacts the customer before they contact you, and hands your team a recommended next step. Fires into Klaviyo and Slack so nobody lives in another dashboard. Read-only, and it runs alongside AfterShip, ShipStation, or Shippo.
 ```
 
 ### Feature list (3–5 features; short heading + one line each)
+
+Lead with the objection. The first line a merchant reads has to answer
+"I already have a tracking app" or the rest is wasted.
 ```
-Exception detection — Delays, failed deliveries, address issues, pickups, no-movement, and lost-in-transit, flagged the moment the carrier scan says so.
+Built for the failures, not the happy path — Delays, failed attempts, address issues, uncollected pickups, no-movement, and lost-in-transit. Your tracking page shows progress; this starts where that runs out.
 
-Proactive customer email — Automatic or one-click messages from templates, so customers hear it from you before they open a ticket.
+Reaches the customer first — Automatic or one-click messages from your brand, sent while there's still time to fix it rather than after the complaint.
 
-Slack alerts & daily digest — Route high-risk exceptions to your team channel and get a once-a-day rollup by Slack or email.
+Fires into the tools you already use — Push exceptions into Klaviyo as events for your own branded flows, or into Slack where your team already works.
 
-Priority that matches impact — VIP tags, high-value orders, and expedited shipping lift ranking and urgency.
+Triaged by what it costs you — VIP tags, high-value orders, and expedited shipping lift a shipment's rank so the expensive failure gets handled first.
 
-Next-best-action — Resend, refund, wait, or trace, recommended for the highest-risk shipments.
+Tells you what to do — Resend, refund, wait, or trace, recommended for every high-risk shipment.
 ```
 
 ### Demo store URL
@@ -68,7 +71,13 @@ Tip: on macOS, Shift-Cmd-4 then Space to grab a clean window; scale to 1600×900
 - Plan name: **Monthly**
 - Price: **$9.99 / month**
 - Free trial: **7 days**
-- (Matches the billing block in `app/shopify.server.ts` and the /terms page.)
+- Set this under **Managed Pricing** in the Partner Dashboard. The app must not
+  call the Billing API — a Managed Pricing app that does throws "Managed Pricing
+  Apps cannot use the Billing API" and crashes install. There is no price in the
+  code; the `$9.99` strings on the landing page and /terms are display only and
+  have to be kept in sync with the dashboard by hand.
+- Plan names must match `PLAN_SHIPMENT_LIMITS` in `src/lib/plans.ts` exactly, or
+  every shop silently falls back to the default monthly shipment allowance.
 
 ### Resources
 - Privacy policy URL: `https://www.delayradar.io/privacy`

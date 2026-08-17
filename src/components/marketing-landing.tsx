@@ -1,27 +1,27 @@
 const features = [
   {
-    title: "Exception detection",
-    body: "Delays, failed deliveries, address issues, pickups, lost-in-transit, and no-movement — surfaced the moment the carrier scan says so.",
+    title: "Catches what tracking pages don't",
+    body: "Delays, failed attempts, address issues, uncollected pickups, lost-in-transit, and packages that simply stopped scanning — the exceptions, not the happy path.",
   },
   {
-    title: "Proactive customer email",
-    body: "Send the right message from a template automatically or by hand, so customers hear it from you before they open a ticket.",
+    title: "Reaches the customer first",
+    body: "The right message goes out automatically, from your brand, while there's still time to fix it — not after they've emailed you.",
   },
   {
-    title: "Slack + daily digest",
-    body: "Route high-risk exceptions into your team channel and get a once-a-day rollup by Slack or email.",
+    title: "Fires into the tools you already use",
+    body: "Push the exception into Klaviyo as an event and run it through your own branded flows. Or route it to Slack. DelayRadar doesn't ask your team to live in another dashboard.",
   },
   {
-    title: "Priority that matches impact",
-    body: "VIP tags, high-value orders, and expedited shipping lift ranking and urgency so the right shipments rise to the top.",
+    title: "Triages by what it costs you",
+    body: "VIP tags, high-value orders, and expedited shipping lift a shipment's rank, so the parcel that will hurt most gets handled first.",
   },
   {
-    title: "Next-best-action",
-    body: "Resend, refund, wait, or trace — DelayRadar recommends the operational step for the highest-risk shipments.",
+    title: "Tells you what to do about it",
+    body: "Resend, refund, wait, or trace — every high-risk shipment carries a recommended next step, so recovery isn't a judgement call every time.",
   },
   {
-    title: "Works on your stack",
-    body: "Tracking-first on EasyPost. Keep ShipStation, Shippo, or whatever you already use for labels — DelayRadar is the exception layer on top.",
+    title: "Sits on top of your stack",
+    body: "Keep ShipStation, Shippo, AfterShip, or whatever you already run. DelayRadar is the recovery layer, not a replacement.",
   },
 ];
 
@@ -29,24 +29,32 @@ const steps = [
   {
     n: "1",
     title: "Connect your store",
-    body: "Install from Shopify with read-only access to orders and fulfillments. We backfill your recent shipments automatically.",
+    body: "Install from Shopify with read-only access to orders and fulfillments. Your recent shipments are backfilled automatically.",
   },
   {
     n: "2",
-    title: "We watch every shipment",
-    body: "DelayRadar tracks each parcel and flags exceptions as they happen, ranking them by real business impact.",
+    title: "We watch for trouble",
+    body: "Every parcel is monitored for the scans that mean something has gone wrong — and ranked by what that failure will actually cost you.",
   },
   {
     n: "3",
-    title: "You act before tickets land",
-    body: "Send proactive updates, escalate to Slack, and follow the recommended next step — all without leaving the app.",
+    title: "Recovery starts on its own",
+    body: "The customer hears from you, your team gets the alert where they already work, and the next step is already decided.",
   },
 ];
 
 const faqs = [
   {
+    q: "I already use AfterShip / 17TRACK / ParcelPanel. Why would I add this?",
+    a: "Keep them. Those tools tell your customer where the parcel is — they're built around the shipment that arrives fine. DelayRadar is built around the one that doesn't: it detects the failure, decides how much it matters, contacts the customer, and tells your team what to do. If your tracking app already recovers your failed deliveries for you, you don't need us.",
+  },
+  {
     q: "Does DelayRadar change my shipping setup?",
-    a: "No. It reads your orders and fulfillments (read-only) and monitors tracking. You keep your existing label and shipping tools.",
+    a: "No. It reads your orders and fulfillments (read-only) and monitors tracking. You keep your existing label, tracking, and shipping tools.",
+  },
+  {
+    q: "Do I have to work inside another dashboard?",
+    a: "No. Exceptions can fire into Klaviyo as an event so they run through your existing flows, or into Slack where your team already is. The dashboard is there when you want it, not a place you have to live.",
   },
   {
     q: "How much does it cost?",
@@ -58,7 +66,7 @@ const faqs = [
   },
   {
     q: "Do my customers get emails from my brand?",
-    a: "Yes. Replies go to your address, and once your sending domain is verified, emails go out as your brand.",
+    a: "Yes. Replies go to your address, and once your sending domain is verified, emails go out as your brand. Or skip our sender entirely and run the whole thing through your Klaviyo.",
   },
 ];
 
@@ -117,6 +125,7 @@ export function MarketingLanding() {
         </a>
         <nav className="lp-nav-links">
           <a href="#how">How it works</a>
+          <a href="#compare">vs. tracking apps</a>
           <a href="#features">Features</a>
           <a href="#pricing">Pricing</a>
           <a href="/support">Support</a>
@@ -130,13 +139,13 @@ export function MarketingLanding() {
         <div className="lp-hero-copy">
           <span className="badge hot">For Shopify brands shipping 200–5,000 orders/mo</span>
           <h1 className="lp-headline">
-            Catch delivery problems before they become “Where is my order?”
-            tickets.
+            We don’t track your shipments. We rescue the ones going wrong.
           </h1>
           <p className="lp-sub">
-            DelayRadar watches every shipment, flags delays and failed
-            deliveries the moment they happen, and helps you reach the customer
-            first — so support stops drowning in WISMO.
+            Keep your tracking app. DelayRadar handles the deliveries that
+            fail — it catches the delay, the failed attempt, the parcel that
+            stopped scanning, contacts the customer before they contact you,
+            and tells your team exactly what to do next.
           </p>
 
           <form
@@ -170,20 +179,25 @@ export function MarketingLanding() {
       <section className="lp-problem">
         <div className="lp-problem-inner">
           <h2 className="lp-section-title">
-            Every delayed package is a support ticket waiting to happen.
+            Tracking tells your customer where the parcel is. It doesn’t do
+            anything when the parcel is stuck.
           </h2>
           <p className="lp-section-copy">
-            Customers notice a stalled shipment before you do, and by the time
-            they email “where is my order?”, the goodwill is already gone.
-            DelayRadar flips that — you reach out first, with the right message,
-            while there’s still time to fix it.
+            Your tracking page is built for the shipment that arrives. The one
+            that doesn’t arrive becomes an angry email, a refund request, and a
+            customer who doesn’t order again — and you find out about it days
+            late, from them. DelayRadar exists for that shipment: it notices
+            first, reaches out first, and hands your team a decision instead of
+            a mystery.
           </p>
         </div>
       </section>
 
       <section className="lp-section" id="how">
         <span className="eyebrow lp-eyebrow">How it works</span>
-        <h2 className="lp-section-title">Live in minutes, useful on day one.</h2>
+        <h2 className="lp-section-title">
+          Detect, triage, contact, resolve — without you watching.
+        </h2>
         <div className="lp-steps">
           {steps.map((step) => (
             <div className="lp-step" key={step.n}>
@@ -195,10 +209,25 @@ export function MarketingLanding() {
         </div>
       </section>
 
+      <section className="lp-section" id="compare">
+        <span className="eyebrow lp-eyebrow">Already have a tracking app?</span>
+        <h2 className="lp-section-title">Good. Keep it.</h2>
+        <p className="lp-section-copy">
+          DelayRadar isn’t a tracking page, a branded order-status portal, or
+          another notification tool competing for the same job. Those tools are
+          designed around the shipment that goes fine — they show progress and
+          send “out for delivery”. DelayRadar is designed around the shipment
+          that goes wrong, and it starts working at the exact moment the others
+          run out of things to say. Install it alongside whatever you already
+          run; it reads your Shopify orders directly and doesn’t touch your
+          existing setup.
+        </p>
+      </section>
+
       <section className="lp-section" id="features">
         <span className="eyebrow lp-eyebrow">What you get</span>
         <h2 className="lp-section-title">
-          The exception layer for your shipping stack.
+          The recovery layer for your shipping stack.
         </h2>
         <div className="lp-features">
           {features.map((feature) => (
@@ -220,9 +249,9 @@ export function MarketingLanding() {
           </div>
           <p className="lp-price-trial">7-day free trial · cancel anytime</p>
           <ul className="lp-price-list">
-            <li>Unlimited monitored shipments</li>
+            <li>Up to 500 monitored shipments a month</li>
             <li>Proactive customer email + templates</li>
-            <li>Slack alerts and daily digest</li>
+            <li>Klaviyo events and Slack alerts</li>
             <li>Priority rules and next-best-action</li>
             <li>Carrier &amp; lane exception reporting</li>
           </ul>
@@ -246,7 +275,9 @@ export function MarketingLanding() {
       </section>
 
       <section className="lp-cta-band">
-        <h2 className="lp-section-title">Stop chasing delayed packages.</h2>
+        <h2 className="lp-section-title">
+          Stop finding out from the customer.
+        </h2>
         <a className="button lp-price-cta" href="#install">
           Start your free trial
         </a>
@@ -262,7 +293,7 @@ export function MarketingLanding() {
         </nav>
         <span className="lp-footer-fine">
           © 2026 Saleh &amp; Associates LLC. DelayRadar is a delivery-exception
-          monitoring app for Shopify.
+          recovery app for Shopify.
         </span>
       </footer>
     </main>
