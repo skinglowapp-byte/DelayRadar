@@ -1,5 +1,5 @@
 import "@shopify/shopify-app-react-router/adapters/node";
-import { ApiVersion, AppDistribution, BillingInterval, shopifyApp } from "@shopify/shopify-app-react-router/server";
+import { ApiVersion, AppDistribution, shopifyApp } from "@shopify/shopify-app-react-router/server";
 import { PrismaSessionStorage } from "@shopify/shopify-app-session-storage-prisma";
 
 import db from "./db.server";
@@ -15,8 +15,6 @@ const scopes = getShopifyScopes()
   .map((scope) => scope.trim())
   .filter(Boolean);
 
-export const MONTHLY_PLAN = "Monthly subscription";
-
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET || "",
@@ -26,18 +24,8 @@ const shopify = shopifyApp({
   authPathPrefix: "/auth",
   sessionStorage: new PrismaSessionStorage(db),
   distribution: AppDistribution.AppStore,
-  billing: {
-    [MONTHLY_PLAN]: {
-      trialDays: 7,
-      lineItems: [
-        {
-          amount: 9.99,
-          currencyCode: "USD",
-          interval: BillingInterval.Every30Days,
-        },
-      ],
-    },
-  },
+  // No `billing` config: DelayRadar uses Shopify Managed Pricing (configured in
+  // the Partner Dashboard), which is incompatible with the Billing API.
   future: {
     expiringOfflineAccessTokens: true,
   },

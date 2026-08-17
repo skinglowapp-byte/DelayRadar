@@ -3,19 +3,14 @@ import { Outlet, useLoaderData, useRouteError } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 
-import { authenticate, MONTHLY_PLAN } from "../shopify.server";
-
-const isTestBilling = process.env.NODE_ENV !== "production";
+import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { billing } = await authenticate.admin(request);
-
-  await billing.require({
-    plans: [MONTHLY_PLAN],
-    isTest: isTestBilling,
-    onFailure: async () =>
-      billing.request({ plan: MONTHLY_PLAN, isTest: isTestBilling }),
-  });
+  // DelayRadar uses Shopify Managed Pricing — Shopify handles the subscription
+  // and charge before the merchant reaches the app, so the app must NOT call
+  // the Billing API (doing so throws "Managed Pricing Apps cannot use the
+  // Billing API"). Just authenticate the embedded request.
+  await authenticate.admin(request);
 
   return {
     apiKey: process.env.SHOPIFY_API_KEY || "",
