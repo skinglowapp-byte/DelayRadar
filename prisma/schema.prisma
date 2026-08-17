@@ -52,6 +52,12 @@ model Shop {
   digestEmailEnabled Boolean           @default(false)
   digestEmailRecipient String?
   digestHour         Int               @default(9)
+  // Managed Pricing subscription, read back from Shopify (the price and plan
+  // names live in the Partner Dashboard, not here). `monthlyShipmentLimit`
+  // overrides the plan's allowance for a single shop; null uses the plan default.
+  planName             String?
+  planSyncedAt         DateTime?
+  monthlyShipmentLimit Int?
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   shipments          Shipment[]
@@ -73,6 +79,11 @@ model Shipment {
   trackingCarrier     String?
   trackingProvider    TrackingProvider @default(EASYPOST)
   trackingProviderId  String?          @unique
+  // When the carrier tracker was actually registered. Billing for tracking is
+  // per tracker, so the monthly allowance counts these, not shipment rows —
+  // a backfill of old orders creates trackers today regardless of order date.
+  trackerCreatedAt    DateTime?
+  trackingSkippedReason String?
   customerName        String?
   customerEmail       String?
   customerPhone       String?
@@ -102,6 +113,7 @@ model Shipment {
   notes               ShipmentNote[]
 
   @@unique([shopId, trackingNumber])
+  @@index([shopId, trackerCreatedAt])
   @@index([shopifyFulfillmentId])
   @@index([shopId, latestStatus])
   @@index([shopId, latestExceptionType])

@@ -3,6 +3,7 @@ import { NextResponse } from "@/src/lib/next-response";
 import { scheduleDueDigests } from "@/src/lib/digest/schedule-due";
 import { sweepNoMovementShipments } from "@/src/lib/processors/no-movement-sweep";
 import { prisma } from "@/src/lib/prisma";
+import { syncStalePlans } from "@/src/lib/shopify/subscription";
 import { isAuthorizedCron } from "@/src/lib/utils";
 import { drainPendingInboundWebhooks } from "@/src/lib/webhooks/process-inbound";
 import { runJobBatch } from "@/src/worker/run-batch";
@@ -86,6 +87,11 @@ async function runWorker() {
     },
   });
 
+  // Refresh cached Managed Pricing plans before draining, so the tracking
+  // allowance enforced during this run reflects an upgrade the merchant made
+  // since the last run.
+  const plans = await syncStalePlans();
+
   // Promote quiet shipments into NO_MOVEMENT exceptions (and enqueue their
   // notifications) before draining, so those alerts go out in this same run.
   const noMovement = await sweepNoMovementShipments();
@@ -153,6 +159,7 @@ async function runWorker() {
       totalFailed: failedJobsTotal,
       stuckReset: stuckResetCount.count,
     },
+    plans,
     noMovement,
     digests,
     pruned: { jobs: prunedJobs.count, webhooks: prunedWebhooks.count },

@@ -12,6 +12,11 @@ import { renderShipmentTemplate } from "@/src/lib/notifications/shipment-templat
 import { sendSlackMessage } from "@/src/lib/notifications/slack";
 import { startOfLocalDay } from "@/src/lib/digest/schedule";
 import { evaluateShipmentPriority } from "@/src/lib/priority/shipment-priority";
+import {
+  allowanceWindowStart,
+  monthlyShipmentLimitFor,
+  OVER_ALLOWANCE_REASON,
+} from "@/src/lib/plans";
 import { backfillRecentShipments } from "@/src/lib/processors/shopify-fulfillment";
 import { prisma } from "@/src/lib/prisma";
 import { createEasyPostTracker } from "@/src/lib/tracking/easypost";
@@ -60,9 +65,45 @@ async function processCreateTrackerJob(jobId: string, shipmentId: string) {
 
   const shipment = await prisma.shipment.findUnique({
     where: { id: shipmentId },
+    include: {
+      shop: {
+        select: {
+          id: true,
+          domain: true,
+          planName: true,
+          monthlyShipmentLimit: true,
+        },
+      },
+    },
   });
 
   if (!shipment || shipment.trackingProviderId) {
+    return;
+  }
+
+  // Check the shop's monthly allowance before registering the tracker, since
+  // registering it is what incurs the per-shipment tracking cost.
+  const limit = monthlyShipmentLimitFor(shipment.shop);
+  const trackedThisMonth = await prisma.shipment.count({
+    where: {
+      shopId: shipment.shopId,
+      trackerCreatedAt: { gte: allowanceWindowStart() },
+    },
+  });
+
+  if (trackedThisMonth >= limit) {
+    // Mark it rather than failing the job: the shipment is a legitimate one we
+    // are choosing not to track, so retrying it later would not help. The
+    // reason is what the dashboard reads to prompt an upgrade.
+    await prisma.shipment.update({
+      where: { id: shipment.id },
+      data: { trackingSkippedReason: OVER_ALLOWANCE_REASON },
+    });
+
+    console.warn(
+      `Shop ${shipment.shop.domain} reached its monthly allowance ` +
+        `(${trackedThisMonth}/${limit}); skipped tracking shipment ${shipment.id}.`,
+    );
     return;
   }
 
@@ -76,6 +117,8 @@ async function processCreateTrackerJob(jobId: string, shipmentId: string) {
     data: {
       trackingProviderId: tracker.id,
       trackingCarrier: tracker.carrier ?? shipment.trackingCarrier,
+      trackerCreatedAt: new Date(),
+      trackingSkippedReason: null,
     },
   });
 
