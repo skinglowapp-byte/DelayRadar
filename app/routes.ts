@@ -8,6 +8,7 @@ export default [
     index("routes/app._index.tsx"),
   ]),
   route("api/*", "routes/api.$.ts"),
+  route("demo", "routes/demo.tsx"),
   route("privacy", "routes/privacy.tsx"),
   route("terms", "routes/terms.tsx"),
   route("support", "routes/support.tsx"),

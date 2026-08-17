@@ -1,7 +1,7 @@
 import type { LoaderFunctionArgs } from "react-router";
 import { redirect } from "react-router";
 
-import { DelayRadarApp } from "@/src/components/delayradar-app";
+import { MarketingLanding } from "@/src/components/marketing-landing";
 
 export function meta() {
   return [
@@ -25,5 +25,5 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 };
 
 export default function IndexRoute() {
-  return <DelayRadarApp initialShop="" initialHost="" />;
+  return <MarketingLanding />;
 }
