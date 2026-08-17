@@ -57,6 +57,10 @@ export function DelayRadarApp({
   const [templateId, setTemplateId] = useState<string>("");
   const [shopInput, setShopInput] = useState(initialShop);
   const [slackWebhookUrl, setSlackWebhookUrl] = useState("");
+  // Never seeded from the server: the stored key is write-only, so an empty
+  // field means "leave whatever is saved alone".
+  const [klaviyoApiKey, setKlaviyoApiKey] = useState("");
+  const [klaviyoEnabled, setKlaviyoEnabled] = useState(false);
   const [digestHour, setDigestHour] = useState("9");
   const [notifyHighRiskOnly, setNotifyHighRiskOnly] = useState(true);
   const [noMovementThresholdHours, setNoMovementThresholdHours] = useState("72");
@@ -117,6 +121,7 @@ export function DelayRadarApp({
     setSlackWebhookUrl("");
     setDigestHour(String(payload.settings.digestHour));
     setNotifyHighRiskOnly(payload.settings.notifyHighRiskOnly);
+    setKlaviyoEnabled(payload.settings.klaviyoEnabled);
     setNoMovementThresholdHours(String(payload.settings.noMovementThresholdHours));
     setLostInTransitThresholdHours(String(payload.settings.lostInTransitThresholdHours));
     setPriorityOrderValueThreshold(
@@ -468,6 +473,81 @@ export function DelayRadarApp({
             saveError instanceof Error
               ? saveError.message
               : "Failed to remove the Slack webhook.",
+          );
+        }
+      })();
+    });
+  }
+
+  function saveKlaviyoSettings() {
+    if (!shopInput || blockDemoWrites()) {
+      return;
+    }
+
+    startTransition(() => {
+      void (async () => {
+        try {
+          setError(null);
+          setNotice(null);
+          await readJson("/api/app/settings/klaviyo", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              shop: shopInput,
+              klaviyoEnabled,
+              // Omit the field entirely when untouched so the saved key
+              // survives a toggle-only save.
+              ...(klaviyoApiKey.trim()
+                ? { klaviyoApiKey: klaviyoApiKey.trim() }
+                : {}),
+            }),
+          });
+          setKlaviyoApiKey("");
+          await refresh();
+          setNotice("Klaviyo settings saved.");
+        } catch (saveError) {
+          setError(
+            saveError instanceof Error
+              ? saveError.message
+              : "Failed to save Klaviyo settings.",
+          );
+        }
+      })();
+    });
+  }
+
+  function disconnectKlaviyo() {
+    if (!shopInput || blockDemoWrites()) {
+      return;
+    }
+
+    startTransition(() => {
+      void (async () => {
+        try {
+          setError(null);
+          setNotice(null);
+          await readJson("/api/app/settings/klaviyo", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              shop: shopInput,
+              klaviyoEnabled: false,
+              klaviyoApiKey: "",
+            }),
+          });
+          setKlaviyoApiKey("");
+          setKlaviyoEnabled(false);
+          await refresh();
+          setNotice("Klaviyo disconnected. No further events will be sent.");
+        } catch (saveError) {
+          setError(
+            saveError instanceof Error
+              ? saveError.message
+              : "Failed to disconnect Klaviyo.",
           );
         }
       })();
@@ -1142,6 +1222,12 @@ export function DelayRadarApp({
                       onQueueDailyDigest={queueDailyDigest}
                       onSaveSlackSettings={saveSlackSettings}
                       onClearSlackWebhook={clearSlackWebhook}
+                      klaviyoApiKey={klaviyoApiKey}
+                      onKlaviyoApiKeyChange={setKlaviyoApiKey}
+                      klaviyoEnabled={klaviyoEnabled}
+                      onKlaviyoEnabledChange={setKlaviyoEnabled}
+                      onSaveKlaviyoSettings={saveKlaviyoSettings}
+                      onDisconnectKlaviyo={disconnectKlaviyo}
                       onRetryFailedJobs={retryFailedJobs}
                     />
                   ) : null}

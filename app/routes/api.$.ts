@@ -7,6 +7,7 @@ import { GET as getHealth } from "../api/app/health/route";
 import { POST as postRetryJobs } from "../api/app/jobs/retry/route";
 import { POST as postManualNotification } from "../api/app/notifications/manual/route";
 import { POST as postPing } from "../api/app/ping/route";
+import { POST as postKlaviyoSettings } from "../api/app/settings/klaviyo/route";
 import { POST as postNotificationSettings } from "../api/app/settings/notifications/route";
 import { POST as postPrioritySettings } from "../api/app/settings/priority/route";
 import { POST as postSenderSettings } from "../api/app/settings/sender/route";
@@ -63,6 +64,7 @@ const postRoutes: Record<string, (request: Request) => Promise<Response>> = {
   "/api/app/ping": postPing,
   "/api/app/settings/notifications": postNotificationSettings,
   "/api/app/settings/priority": postPrioritySettings,
+  "/api/app/settings/klaviyo": postKlaviyoSettings,
   "/api/app/settings/sender": postSenderSettings,
   "/api/app/settings/slack": postSlackSettings,
   "/api/app/settings/slack/test": postSlackTest,

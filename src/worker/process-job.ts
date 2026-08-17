@@ -7,7 +7,12 @@ import {
 
 import type { QueueJob } from "@prisma/client";
 
+import { decrypt } from "@/src/lib/crypto";
 import { sendEmail, shopEmailSender } from "@/src/lib/notifications/email";
+import {
+  KLAVIYO_METRIC_NAME,
+  sendKlaviyoEvent,
+} from "@/src/lib/notifications/klaviyo";
 import { renderShipmentTemplate } from "@/src/lib/notifications/shipment-template";
 import { sendSlackMessage } from "@/src/lib/notifications/slack";
 import { startOfLocalDay } from "@/src/lib/digest/schedule";
@@ -325,6 +330,103 @@ async function processNotificationJob(shipmentId: string) {
       });
     }
   }
+
+  await emitKlaviyoException(shipment, priority.effectiveRiskScore, checkpointAt);
+}
+
+// Klaviyo is emitted independently of the email rule on purpose: a merchant who
+// wires this up is choosing to own the customer message in their own flows, so
+// gating the event on our own send would mean they only hear about exceptions
+// we already emailed about — the opposite of what they signed up for.
+async function emitKlaviyoException(
+  shipment: {
+    id: string;
+    shopId: string;
+    customerEmail: string | null;
+    trackingNumber: string;
+    trackingCarrier: string | null;
+    latestExceptionType: string | null;
+    latestStatus: string;
+    shopifyOrderName: string | null;
+    orderValueCents: number | null;
+    promisedDeliveryDate: Date | null;
+    shop: {
+      klaviyoEnabled: boolean;
+      klaviyoApiKey: string | null;
+      currencyCode: string | null;
+    };
+  },
+  effectiveRiskScore: number,
+  checkpointAt: Date,
+) {
+  if (!prisma) {
+    return;
+  }
+
+  const { shop } = shipment;
+
+  if (!shop.klaviyoEnabled || !shop.klaviyoApiKey || !shipment.customerEmail) {
+    return;
+  }
+
+  // Same dedupe window as email/Slack: one event per shipment per checkpoint,
+  // so a re-run of the job cannot re-trigger the merchant's flow.
+  const alreadySent = await hasSentShipmentNotification({
+    shipmentId: shipment.id,
+    channel: NotificationChannel.KLAVIYO,
+    since: checkpointAt,
+  });
+
+  if (alreadySent) {
+    return;
+  }
+
+  const result = await sendKlaviyoEvent({
+    apiKey: decrypt(shop.klaviyoApiKey),
+    email: shipment.customerEmail,
+    // Ties the event to this shipment *and* this checkpoint, so a later, real
+    // exception on the same shipment still gets through.
+    uniqueId: `${shipment.id}:${checkpointAt.toISOString()}`,
+    occurredAt: checkpointAt,
+    properties: {
+      order_name: shipment.shopifyOrderName,
+      tracking_number: shipment.trackingNumber,
+      carrier: shipment.trackingCarrier,
+      exception_type: shipment.latestExceptionType,
+      shipment_status: shipment.latestStatus,
+      risk_score: effectiveRiskScore,
+      promised_delivery_date: shipment.promisedDeliveryDate?.toISOString() ?? null,
+      order_value: shipment.orderValueCents == null ? null : shipment.orderValueCents / 100,
+      currency: shop.currencyCode,
+    },
+  });
+
+  await prisma.notificationLog.create({
+    data: {
+      shopId: shipment.shopId,
+      shipmentId: shipment.id,
+      channel: NotificationChannel.KLAVIYO,
+      target: shipment.customerEmail,
+      status:
+        result.status === "sent"
+          ? NotificationDeliveryStatus.SENT
+          : NotificationDeliveryStatus.FAILED,
+      subject: KLAVIYO_METRIC_NAME,
+      body: shipment.latestExceptionType ?? "",
+      sentAt: result.status === "sent" ? new Date() : null,
+      errorMessage: result.status === "failed" ? result.error : null,
+    },
+  });
+
+  // Surface the last outcome on the shop so a broken key is visible in
+  // settings rather than only in a log line nobody reads.
+  await prisma.shop.update({
+    where: { id: shipment.shopId },
+    data:
+      result.status === "sent"
+        ? { klaviyoLastEventAt: new Date(), klaviyoLastError: null }
+        : { klaviyoLastError: result.error },
+  });
 }
 
 async function processDailyDigestJob(input: {

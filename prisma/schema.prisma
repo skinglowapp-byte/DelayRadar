@@ -58,6 +58,13 @@ model Shop {
   planName             String?
   planSyncedAt         DateTime?
   monthlyShipmentLimit Int?
+  // Klaviyo: emit the exception as an event into the merchant's own account so
+  // they can drive it through their existing branded flows instead of relying
+  // on our sender. The private API key is stored encrypted, like Shopify's.
+  klaviyoEnabled       Boolean           @default(false)
+  klaviyoApiKey        String?
+  klaviyoLastEventAt   DateTime?
+  klaviyoLastError     String?
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   shipments          Shipment[]
@@ -307,6 +314,7 @@ enum NotificationChannel {
   EMAIL
   SMS
   SLACK
+  KLAVIYO
 }
 
 enum NotificationDeliveryStatus {

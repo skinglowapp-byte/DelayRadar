@@ -1,5 +1,5 @@
 import type { AppBootstrap } from "@/src/lib/data/types";
-import { cn, formatCurrency } from "@/src/lib/utils";
+import { cn, formatCurrency, formatDateTime } from "@/src/lib/utils";
 
 import {
   emailRuleDescription,
@@ -49,6 +49,12 @@ export function SettingsTab({
   onQueueDailyDigest,
   onSaveSlackSettings,
   onClearSlackWebhook,
+  klaviyoApiKey,
+  onKlaviyoApiKeyChange,
+  klaviyoEnabled,
+  onKlaviyoEnabledChange,
+  onSaveKlaviyoSettings,
+  onDisconnectKlaviyo,
   onRetryFailedJobs,
 }: {
   health: AppBootstrap["health"] | null;
@@ -91,6 +97,12 @@ export function SettingsTab({
   onQueueDailyDigest: () => void;
   onSaveSlackSettings: () => void;
   onClearSlackWebhook: () => void;
+  klaviyoApiKey: string;
+  onKlaviyoApiKeyChange: (value: string) => void;
+  klaviyoEnabled: boolean;
+  onKlaviyoEnabledChange: (value: boolean) => void;
+  onSaveKlaviyoSettings: () => void;
+  onDisconnectKlaviyo: () => void;
   onRetryFailedJobs: () => void;
 }) {
   return (
@@ -456,6 +468,86 @@ export function SettingsTab({
           >
             Save priority rules
           </button>
+        </div>
+      </div>
+
+      <div className="stack">
+        <div className="toolbar">
+          <div>
+            <span className="eyebrow">Integrations</span>
+            <h2 className="section-title">Klaviyo</h2>
+          </div>
+          <span className={cn("pill", settings?.klaviyoEnabled ? "" : "muted")}>
+            {settings?.klaviyoEnabled ? "Sending events" : "Off"}
+          </span>
+        </div>
+        <p className="microcopy">
+          Send every delivery exception into your own Klaviyo account as a{" "}
+          <strong>DelayRadar Delivery Exception</strong> event, so you can drive
+          it through your existing branded flows instead of ours. The event
+          carries the order, carrier, tracking number, exception type and risk
+          score.
+        </p>
+        <div className="form-grid">
+          <label className="field wide">
+            <span className="field-label">Klaviyo private API key</span>
+            <input
+              className="input"
+              type="password"
+              autoComplete="off"
+              placeholder={
+                settings?.klaviyoConfigured
+                  ? "A key is saved — enter a new one to replace it"
+                  : "pk_..."
+              }
+              value={klaviyoApiKey}
+              onChange={(event) => onKlaviyoApiKeyChange(event.target.value)}
+            />
+            <span className="helper-text">
+              Klaviyo → Settings → API keys → Private API keys. Needs write
+              access to events.
+            </span>
+          </label>
+        </div>
+        <label
+          className="toggle-card"
+          aria-label="Send exception events to Klaviyo"
+        >
+          <input
+            type="checkbox"
+            checked={klaviyoEnabled}
+            onChange={(event) => onKlaviyoEnabledChange(event.target.checked)}
+          />
+          <div className="stack tight">
+            <span className="field-label">Send exception events to Klaviyo</span>
+            <span className="helper-text">
+              {settings?.klaviyoLastError
+                ? `Last event failed: ${settings.klaviyoLastError}`
+                : settings?.klaviyoLastEventAt
+                  ? `Last event sent ${formatDateTime(settings.klaviyoLastEventAt)}.`
+                  : "No events sent yet."}
+            </span>
+          </div>
+        </label>
+        <div className="stack-form">
+          <button
+            className="button"
+            type="button"
+            onClick={onSaveKlaviyoSettings}
+            disabled={isSaving}
+          >
+            Save Klaviyo settings
+          </button>
+          {settings?.klaviyoConfigured ? (
+            <button
+              className="button-secondary"
+              type="button"
+              onClick={onDisconnectKlaviyo}
+              disabled={isSaving}
+            >
+              Disconnect Klaviyo
+            </button>
+          ) : null}
         </div>
       </div>
 

@@ -149,6 +149,11 @@ export type AppSettingsSummary = {
   trackingProvider: string;
   currencyCode: string;
   slackConfigured: boolean;
+  // The key itself is never sent to the browser — only whether one is stored.
+  klaviyoConfigured: boolean;
+  klaviyoEnabled: boolean;
+  klaviyoLastEventAt: string | null;
+  klaviyoLastError: string | null;
   digestHour: number;
   notifyHighRiskOnly: boolean;
   hasEmailProvider: boolean;
