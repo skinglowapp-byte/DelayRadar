@@ -1,3 +1,4 @@
+import { decrypt } from "@/src/lib/crypto";
 import { prisma } from "@/src/lib/prisma";
 
 import { shopifyAdminGraphql } from "./admin";
@@ -61,9 +62,10 @@ export async function syncShopPlan(shopId: string): Promise<string | null> {
     return null;
   }
 
+  // Tokens are stored encrypted at rest (see src/lib/shopify/oauth.ts).
   const planName = await fetchActivePlanName({
     shop: shop.domain,
-    accessToken: shop.offlineAccessToken,
+    accessToken: decrypt(shop.offlineAccessToken),
   });
 
   await prisma.shop.update({
