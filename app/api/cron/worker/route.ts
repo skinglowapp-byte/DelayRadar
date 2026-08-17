@@ -17,6 +17,7 @@ const TIME_BUDGET_MS = 50_000;
 // unbounded QueueJob / InboundWebhook growth and PII lifetime.
 const COMPLETED_JOB_RETENTION_DAYS = 14;
 const PROCESSED_WEBHOOK_RETENTION_DAYS = 30;
+const CRON_RUN_RETENTION_DAYS = 30;
 
 export async function GET(request: Request) {
   if (!isAuthorizedCron(request)) {
@@ -28,6 +29,36 @@ export async function GET(request: Request) {
       { error: "No database connection." },
       { status: 503 },
     );
+  }
+
+  // Record the heartbeat before doing any work, so a run that dies partway
+  // through still leaves evidence that it started. Without this, a cron that
+  // fires and then throws is indistinguishable from a cron that never fired.
+  const run = await prisma.cronRun.create({ data: { job: "worker" } });
+
+  try {
+    const summary = await runWorker();
+    await prisma.cronRun.update({
+      where: { id: run.id },
+      data: { finishedAt: new Date(), ok: true, summary },
+    });
+    return NextResponse.json(summary);
+  } catch (error) {
+    await prisma.cronRun.update({
+      where: { id: run.id },
+      data: {
+        finishedAt: new Date(),
+        ok: false,
+        error: error instanceof Error ? error.message : String(error),
+      },
+    });
+    throw error;
+  }
+}
+
+async function runWorker() {
+  if (!prisma) {
+    throw new Error("No database connection.");
   }
 
   const deadline = Date.now() + TIME_BUDGET_MS;
@@ -91,6 +122,9 @@ export async function GET(request: Request) {
   const webhookRetentionCutoff = new Date(
     Date.now() - PROCESSED_WEBHOOK_RETENTION_DAYS * 24 * 3600_000,
   );
+  const cronRunRetentionCutoff = new Date(
+    Date.now() - CRON_RUN_RETENTION_DAYS * 24 * 3600_000,
+  );
   const [prunedJobs, prunedWebhooks] = await Promise.all([
     prisma.queueJob.deleteMany({
       where: { status: "COMPLETED", processedAt: { lte: jobRetentionCutoff } },
@@ -101,6 +135,9 @@ export async function GET(request: Request) {
         processedAt: { lte: webhookRetentionCutoff },
       },
     }),
+    prisma.cronRun.deleteMany({
+      where: { startedAt: { lte: cronRunRetentionCutoff } },
+    }),
   ]);
 
   const [pendingJobs, failedJobsTotal] = await Promise.all([
@@ -108,7 +145,7 @@ export async function GET(request: Request) {
     prisma.queueJob.count({ where: { status: "FAILED" } }),
   ]);
 
-  return NextResponse.json({
+  return {
     inbound,
     jobs: {
       ...jobs,
@@ -120,5 +157,5 @@ export async function GET(request: Request) {
     digests,
     pruned: { jobs: prunedJobs.count, webhooks: prunedWebhooks.count },
     checkedAt: new Date().toISOString(),
-  });
+  };
 }

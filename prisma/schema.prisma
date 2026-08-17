@@ -248,6 +248,21 @@ model ShipmentNote {
   @@index([shipmentId, createdAt])
 }
 
+// Heartbeat for the scheduled worker. Vercel's Hobby plan keeps runtime logs
+// for about an hour, so "did the cron actually fire at 09:00?" is otherwise
+// unanswerable after the fact. Each invocation writes one row here.
+model CronRun {
+  id         String    @id @default(cuid())
+  job        String
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  ok         Boolean   @default(false)
+  summary    Json?
+  error      String?
+
+  @@index([job, startedAt])
+}
+
 enum WorkflowState {
   OPEN
   SNOOZED
