@@ -1,5 +1,5 @@
 client_id = "4801d24015598934b6c447731cbac1a6"
-name = "DelayRadar"
+name = "ReturnSense"
 application_url = "https://www.delayradar.io"
 embedded = true
 handle = "delayradar"
@@ -17,7 +17,7 @@ redirect_urls = [
 ]
 
 [webhooks]
-api_version = "2025-10"
+api_version = "2026-04"
 
   [[webhooks.subscriptions]]
   topics = ["app/uninstalled"]

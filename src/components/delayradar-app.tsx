@@ -27,28 +27,36 @@ import {
 import { InstallPanel } from "./delayradar/install-panel";
 import { OverviewTab } from "./delayradar/overview-tab";
 import { ReportsTab } from "./delayradar/reports-tab";
+import { ReturnsTab } from "./delayradar/returns-tab";
 import { SettingsTab } from "./delayradar/settings-tab";
 import { TemplatesTab } from "./delayradar/templates-tab";
 
-type DelayRadarAppProps = {
+type ReturnSenseAppProps = {
   initialShop: string;
   initialHost: string;
 };
 
-type TabKey = "overview" | "exceptions" | "templates" | "reports" | "settings";
+type TabKey =
+  | "overview"
+  | "exceptions"
+  | "returns"
+  | "templates"
+  | "reports"
+  | "settings";
 
 const tabs: Array<{ id: TabKey; label: string }> = [
   { id: "overview", label: "Overview" },
   { id: "exceptions", label: "Exceptions inbox" },
+  { id: "returns", label: "Returns" },
   { id: "templates", label: "Templates" },
   { id: "reports", label: "Reports" },
   { id: "settings", label: "Settings" },
 ];
 
-export function DelayRadarApp({
+export function ReturnSenseApp({
   initialShop,
   initialHost,
-}: DelayRadarAppProps) {
+}: ReturnSenseAppProps) {
   const [data, setData] = useState<AppBootstrap | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [error, setError] = useState<string | null>(null);
@@ -176,12 +184,15 @@ export function DelayRadarApp({
         setError(
           loadError instanceof Error
             ? loadError.message
-            : "Failed to load DelayRadar data.",
+            : "Failed to load ReturnSense data.",
         );
       }
     }
 
     void load();
+    // Initial bootstrap should track the embedded shop switch only; the helper
+    // functions are recreated on render and would turn this into a reload loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialShop]);
 
   const carrierOptions = useMemo(
@@ -315,7 +326,7 @@ export function DelayRadarApp({
     if (data?.mode === "demo") {
       setError(null);
       setNotice(
-        "Demo mode is read-only. Install DelayRadar on your store to save changes.",
+        "Demo mode is read-only. Install ReturnSense on your store to save changes.",
       );
       return true;
     }
@@ -969,7 +980,7 @@ export function DelayRadarApp({
       <main className="page-shell">
         <div className="app-frame">
           <section className="hero-panel" style={{ textAlign: "center", padding: "4rem 1rem" }}>
-            <span className="badge hot">DelayRadar</span>
+            <span className="badge hot">ReturnSense</span>
             <p className="hero-copy" style={{ marginTop: "1rem" }}>
               Loading your store data...
             </p>
@@ -986,7 +997,7 @@ export function DelayRadarApp({
       <main className="page-shell">
         <div className="app-frame">
           <section className="hero-panel" style={{ textAlign: "center", padding: "4rem 1rem" }}>
-            <span className="badge hot">DelayRadar</span>
+            <span className="badge hot">ReturnSense</span>
             <h1 className="hero-title" style={{ marginTop: "1rem" }}>
               We couldn’t load your store data
             </h1>
@@ -1011,7 +1022,7 @@ export function DelayRadarApp({
       <div className="app-frame">
         <section className="hero-panel">
           <div className="hero-topline">
-            <span className="badge hot">DelayRadar</span>
+            <span className="badge hot">ReturnSense</span>
             <div className="split-inline">
               <span className="badge">{modeBadge} mode</span>
               {data?.shop ? (
@@ -1022,13 +1033,14 @@ export function DelayRadarApp({
 
           <div>
             <h1 className="hero-title">
-              Catch delivery exceptions before they become WISMO tickets.
+              Unite delivery recovery and returns prevention in one Shopify ops app.
             </h1>
             <p className="hero-copy">
-              DelayRadar is an embedded Shopify operations app for stores shipping
-              200 to 5,000 orders per month. It watches fulfilments, creates
-              trackers in your existing shipping stack, surfaces exception risk,
-              and triggers proactive customer communication.
+              ReturnSense combines delivery-intelligence with returns-aware
+              workflows. It watches fulfilments, surfaces
+              carrier and exception risk, prevents avoidable WISMO tickets, and
+              shows when a shipment should become a resend, exchange, or refund
+              decision.
             </p>
           </div>
 
@@ -1086,9 +1098,10 @@ export function DelayRadarApp({
                     <div className="callout">
                       <strong>Why this niche</strong>
                       <p className="microcopy">
-                        Support leads and ops managers need fewer exception surprises,
-                        fewer “Where is my order?” tickets, and fast customer messaging
-                        without changing the shipping tools they already use.
+                        Support leads and ops managers need one place for the
+                        messy post-purchase moments: stuck shipments, preventable
+                        returns, refund reviews, and customer messaging that
+                        happens before frustration peaks.
                       </p>
                     </div>
                   </div>
@@ -1166,8 +1179,15 @@ export function DelayRadarApp({
                     />
                   ) : null}
 
+                  {activeTab === "returns" ? (
+                    <ReturnsTab data={data} />
+                  ) : null}
+
                   {activeTab === "reports" ? (
-                    <ReportsTab carrierReport={data?.carrierReport ?? []} />
+                    <ReportsTab
+                      carrierReport={data?.carrierReport ?? []}
+                      carrierLaneInsights={data?.carrierLaneInsights ?? []}
+                    />
                   ) : null}
 
                   {activeTab === "settings" ? (

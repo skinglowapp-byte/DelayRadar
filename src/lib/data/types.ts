@@ -121,6 +121,7 @@ export type ExceptionDetail = {
   carrierRiskScore: number;
   priorityLabel: string;
   priorityReasons: string[];
+  orderValueCents: number | null;
   orderValueLabel: string | null;
   shippingMethodLabel: string | null;
   lastCheckpointAt: string;
@@ -143,6 +144,44 @@ export type CarrierReportRow = {
   topExceptionType: string;
   lostInTransitCount: number;
   avgResolutionHours: number | null;
+};
+
+export type CarrierLaneInsight = {
+  id: string;
+  laneLabel: string;
+  carrier: string;
+  serviceLevel: string;
+  shipmentCount: number;
+  exceptionCount: number;
+  exceptionRate: number;
+  noMovementCount: number;
+  highPriorityCount: number;
+  avgRiskScore: number;
+  tone: Tone;
+  recommendation: string;
+};
+
+export type RecoveryExperiment = {
+  id: string;
+  title: string;
+  hypothesis: string;
+  playbook: string;
+  sampleSize: number;
+  confidence: RecommendationConfidence;
+  tone: Tone;
+};
+
+export type RecoveryOutcomeSummary = {
+  recommendedActionMix: Array<{
+    action: RecommendationAction;
+    label: string;
+    count: number;
+    tone: Tone;
+  }>;
+  decisionCount: number;
+  automatableCount: number;
+  estimatedValueAtRiskLabel: string;
+  experiments: RecoveryExperiment[];
 };
 
 export type AppSettingsSummary = {
@@ -244,6 +283,8 @@ export type AppBootstrap = {
   templates: TemplateRow[];
   timeline: TimelineEntry[];
   carrierReport: CarrierReportRow[];
+  carrierLaneInsights: CarrierLaneInsight[];
+  recoveryOutcome: RecoveryOutcomeSummary;
   health: SyncHealthSummary;
   onboarding: OnboardingChecklist;
   backfill: BackfillStatus;

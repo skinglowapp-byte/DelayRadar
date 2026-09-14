@@ -15,12 +15,12 @@ export function InstallPanel({
     <div className="hero-grid">
       <div className="surface-panel install-card">
         <span className="eyebrow">Connect store</span>
-        <h2 className="section-title">Install DelayRadar into Shopify</h2>
+        <h2 className="section-title">Install ReturnSense into Shopify</h2>
         <p className="section-copy">
           Enter a <span className="mono">.myshopify.com</span> domain to
-          start OAuth. After install, DelayRadar seeds default email
-          templates, registers webhook-driven ingestion, and queues an
-          initial backfill of recent fulfillments.
+          start OAuth. After install, ReturnSense seeds delivery-recovery email
+          templates, registers webhook-driven ingestion, and queues an initial
+          backfill of recent fulfillments.
         </p>
         <form
           action="/auth/login"
@@ -63,9 +63,9 @@ export function InstallPanel({
         <div className="callout">
           <strong>Works on top of your existing shipping stack</strong>
           <p className="microcopy">
-            DelayRadar monitors carrier tracking for exceptions — delays, failed
-            deliveries, and lost packages — so you can keep ShipStation, Shippo,
-            or whatever label tools you already use.
+            ReturnSense keeps delivery intelligence, then connects those signals
+            to returns prevention and refund or
+            resend review.
           </p>
         </div>
         <div className="timeline">

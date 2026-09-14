@@ -1,6 +1,6 @@
-# DelayRadar
+# ReturnSense
 
-DelayRadar is an embedded Shopify app for delivery exception monitoring and proactive customer communication. The MVP is intentionally narrow: ingest Shopify fulfillments, register EasyPost trackers, rank exception risk, send proactive email, and escalate high-risk issues into Slack.
+ReturnSense is an embedded Shopify post-purchase operations app. It combines delivery intelligence with returns-prevention workflows: ingest Shopify fulfillments, register EasyPost trackers, rank exception and carrier-lane risk, send proactive email, escalate high-risk issues into Slack, and surface orders that may need resend, exchange, refund, or return-prevention review.
 
 ## Stack
 
@@ -51,7 +51,7 @@ npm run db:seed
 npm run dev
 ```
 
-This runs `shopify app dev` and uses the web command defined in [shopify.web.toml](/Users/mohamedsaleh/Desktop/Supabase Projects/delayradar/shopify.web.toml), so the local app URL stays aligned with the Shopify CLI tunnel while you develop.
+This runs `shopify app dev` and uses the web command defined in [shopify.web.toml](/Users/mohamedsaleh/Documents/Business/MoLabs/Shopify Apps/delayradar/shopify.web.toml), so the local app URL stays aligned with the Shopify CLI tunnel while you develop.
 
 5. Run the worker in a separate terminal:
 
@@ -61,7 +61,7 @@ npm run worker
 
 ## Shopify configuration
 
-Update [shopify.app.toml](/Users/mohamedsaleh/Desktop/Supabase Projects/delayradar/shopify.app.toml) with your real Shopify app client ID and Vercel production URL. The web process is defined in [shopify.web.toml](/Users/mohamedsaleh/Desktop/Supabase Projects/delayradar/shopify.web.toml).
+Update [shopify.app.toml](/Users/mohamedsaleh/Documents/Business/MoLabs/Shopify Apps/delayradar/shopify.app.toml) with your real Shopify app client ID and Vercel production URL. The web process is defined in [shopify.web.toml](/Users/mohamedsaleh/Documents/Business/MoLabs/Shopify Apps/delayradar/shopify.web.toml).
 
 `shopify app dev` is configured and verified against the `euromrr-2.myshopify.com` dev store. Fulfillment webhooks are intentionally not subscribed in `shopify.app.toml` right now because Shopify blocks those topics until the app is approved for protected customer data. The existing backfill flow still works for development; add fulfillment webhook subscriptions back after protected data approval.
 
@@ -87,5 +87,5 @@ Required Shopify scopes for the MVP:
 
 - Single-store onboarding first
 - EasyPost as the tracking provider for the first release
-- Proactive email and Slack are in-scope; SMS, returns labels, and auto-refunds come later
-- Existing shipping stack stays in place; DelayRadar monitors exceptions rather than replacing label tooling
+- Proactive email, Slack, delivery intelligence, and returns-prevention triage are in-scope; SMS, returns labels, and auto-refunds come later
+- Existing shipping and returns stacks stay in place; ReturnSense monitors exceptions and revenue-impacting recovery decisions rather than replacing label tooling

@@ -16,7 +16,7 @@ export async function GET(request: Request) {
         error:
           error instanceof Error
             ? error.message
-            : "Unable to load DelayRadar bootstrap data.",
+            : "Unable to load ReturnSense bootstrap data.",
       },
       { status: 500 },
     );

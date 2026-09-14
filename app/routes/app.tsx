@@ -6,7 +6,7 @@ import { AppProvider } from "@shopify/shopify-app-react-router/react";
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  // DelayRadar uses Shopify Managed Pricing — Shopify handles the subscription
+  // ReturnSense uses Shopify Managed Pricing — Shopify handles the subscription
   // and charge before the merchant reaches the app, so the app must NOT call
   // the Billing API (doing so throws "Managed Pricing Apps cannot use the
   // Billing API"). Just authenticate the embedded request.

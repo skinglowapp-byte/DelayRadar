@@ -2,15 +2,37 @@ import type { LoaderFunctionArgs } from "react-router";
 import { redirect } from "react-router";
 
 import { MarketingLanding } from "@/src/components/marketing-landing";
+import { absoluteUrl, SITE_NAME } from "@/src/lib/seo";
+
+export const links = () => [
+  { rel: "canonical", href: absoluteUrl("/") },
+];
 
 export function meta() {
+  const title = `${SITE_NAME} | Shopify Post-Purchase Recovery App`;
+  const description =
+    "ReturnSense helps Shopify brands prevent avoidable returns by recovering delivery exceptions before they become refunds, tickets, or chargebacks.";
+
   return [
-    { title: "DelayRadar — Delivery exception recovery for Shopify" },
+    { title },
     {
       name: "description",
-      content:
-        "Keep your tracking app. DelayRadar handles the deliveries that fail — it catches delays, failed attempts, and lost packages, contacts the customer before they contact you, and tells your team what to do next. For Shopify stores shipping 200–5,000 orders/month.",
+      content: description,
     },
+    { name: "robots", content: "index,follow" },
+    {
+      name: "keywords",
+      content:
+        "Shopify post-purchase recovery, delivery exception recovery, returns prevention, carrier lane intelligence, Shopify refund prevention",
+    },
+    { property: "og:type", content: "website" },
+    { property: "og:title", content: title },
+    { property: "og:description", content: description },
+    { property: "og:url", content: absoluteUrl("/") },
+    { property: "og:site_name", content: SITE_NAME },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:title", content: title },
+    { name: "twitter:description", content: description },
   ];
 }
 

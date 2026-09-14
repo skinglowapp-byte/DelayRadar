@@ -4,7 +4,7 @@
 // let us send customer email from our domain means worse-looking mail, a manual
 // per-shop sender-verification step, and our deliverability reputation on the
 // hook for their sends. Emitting an event into their Klaviyo instead makes
-// DelayRadar a signal source: they build the flow, we tell them when to fire it.
+// ReturnSense a signal source: they build the flow, we tell them when to fire it.
 
 const KLAVIYO_EVENTS_ENDPOINT = "https://a.klaviyo.com/api/events/";
 

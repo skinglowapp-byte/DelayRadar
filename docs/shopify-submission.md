@@ -1,8 +1,8 @@
-# DelayRadar — Shopify App Store submission kit
+# ReturnSense — Shopify App Store submission kit
 
 Everything you paste into the Partner Dashboard, plus the protected-customer-data
 request answers. Partner Dashboard: https://partners.shopify.com →
-Apps → DelayRadar.
+Apps → ReturnSense.
 
 ---
 
@@ -12,13 +12,13 @@ Partner Dashboard → your app → **Distribution → Manage listing** (create a
 "App Store listing" if you don't have one yet).
 
 ### App icon
-Use `Documents for Apps/DelayRadar Shopify Items/DelayRadar_Logo_Shopify.png`
+Use a ReturnSense 1200×1200 PNG from your app-submission assets
 (Shopify wants a 1200×1200 PNG, no rounded corners, no text baked in — crop/pad
 if needed).
 
 ### App name (30 char max)
 ```
-DelayRadar
+ReturnSense
 ```
 
 ### App card subtitle / tagline (62 char max)
@@ -33,7 +33,7 @@ Recover failed deliveries: detect the exception, reach the customer first, act b
 
 ### App details (500 char max)
 ```
-Your tracking app is built for the shipment that arrives. DelayRadar is built for the one that doesn't. It watches every fulfillment for delays, failed attempts, address issues, no-movement, and lost-in-transit, ranks each by what the failure will actually cost you, contacts the customer before they contact you, and hands your team a recommended next step. Fires into Klaviyo and Slack so nobody lives in another dashboard. Read-only, and it runs alongside AfterShip, ShipStation, or Shippo.
+ReturnSense is the post-purchase ops layer between tracking and returns. It watches every fulfillment for delays, failed attempts, address issues, no-movement, and lost-in-transit, ranks each by what the failure will actually cost you, contacts the customer before they contact you, and hands your team a recommended next step: save, trace, resend, exchange, refund review, or return-prevention follow-up. Fires into Klaviyo and Slack so nobody lives in another dashboard. Read-only, and it runs alongside AfterShip, ShipStation, Shippo, and your existing returns stack.
 ```
 
 ### Feature list (3–5 features; short heading + one line each)
@@ -98,7 +98,7 @@ EasyPost, Slack, Postmark, SendGrid
 
 ## 2. Protected customer data access
 
-DelayRadar reads customer name, email, and phone to send delivery notifications —
+ReturnSense reads customer name, email, and phone to send delivery notifications —
 that is **protected customer data**, so Shopify requires this approval before the
 `fulfillments/create` and `fulfillments/update` webhooks (already in
 `shopify.app.toml`) will actually deliver.
@@ -114,14 +114,14 @@ Request access**.
 
 ### Reason for access (paste per prompt)
 ```
-DelayRadar monitors each order's shipment for delivery exceptions and sends the
+ReturnSense monitors each order's shipment for delivery exceptions and sends the
 customer proactive delivery-status emails on the merchant's behalf. We use the
 customer's name to personalize the message, their email to send it, and their
 phone only where the merchant enables SMS-style contact. We do not use customer
 data for advertising, profiling, or resale.
 ```
 
-### Data-handling attestations (all true for DelayRadar — check each "yes")
+### Data-handling attestations (all true for ReturnSense — check each "yes")
 - **Only request data you need:** Yes — scopes are `read_orders`,
   `read_fulfillments` only; we store name/email/phone and shipment fields.
 - **Encrypt in transit:** Yes — all traffic is HTTPS; webhooks are HMAC-verified.

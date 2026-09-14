@@ -1,11 +1,12 @@
 export function meta() {
   return [
-    { title: "Privacy Policy — DelayRadar" },
+    { title: "Privacy Policy — ReturnSense" },
     {
       name: "description",
       content:
-        "How DelayRadar collects, uses, retains, and deletes store and customer data for delivery-exception monitoring.",
+        "How ReturnSense collects, uses, retains, and deletes store and customer data for delivery recovery and returns prevention.",
     },
+    { name: "robots", content: "noindex,follow" },
   ];
 }
 
@@ -29,8 +30,8 @@ export default function PrivacyPolicyRoute() {
 
       <h2>What data we collect</h2>
       <p>
-        DelayRadar collects the minimum data needed to monitor delivery
-        exceptions for your Shopify store:
+        ReturnSense collects the minimum data needed to monitor delivery
+        exceptions and returns-prevention workflows for your Shopify store:
       </p>
       <ul>
         <li>
@@ -57,8 +58,8 @@ export default function PrivacyPolicyRoute() {
       <ul>
         <li>Detect and surface delivery exceptions (delays, failed deliveries, lost packages).</li>
         <li>Send proactive customer emails and Slack alerts that you configure.</li>
-        <li>Generate carrier performance reports and risk scoring.</li>
-        <li>Power the exceptions inbox, workflow management, and daily digests.</li>
+        <li>Generate carrier performance reports, lane insights, and risk scoring.</li>
+        <li>Power the exceptions inbox, returns-prevention workflow, and daily digests.</li>
       </ul>
 
       <h2>Data sharing</h2>
@@ -74,7 +75,7 @@ export default function PrivacyPolicyRoute() {
 
       <h2>Where your data is stored (sub-processors)</h2>
       <p>
-        DelayRadar runs on Vercel (application hosting) and stores data in a
+        ReturnSense runs on Vercel (application hosting) and stores data in a
         Neon PostgreSQL database, both located in the United States. Tracking is
         performed by EasyPost, and, where you configure them, email is delivered
         by Postmark or SendGrid and alerts by Slack. Your data is shared with
@@ -88,7 +89,7 @@ export default function PrivacyPolicyRoute() {
         records after 30 days and completed background jobs after 14 days.
       </p>
       <p>
-        When you uninstall DelayRadar, your access token is immediately revoked.
+        When you uninstall ReturnSense, your access token is immediately revoked.
         If Shopify sends a <em>shop/redact</em> request, all data for that shop
         — including shipments, status events, templates, notifications, notes,
         queued jobs, and stored webhook payloads — is permanently deleted.

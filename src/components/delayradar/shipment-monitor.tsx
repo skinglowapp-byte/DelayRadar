@@ -59,7 +59,7 @@ export function ShipmentMonitorTable({
         <div className="empty-state">
           <strong>Scanning your recent fulfillments…</strong>
           <p className="microcopy">
-            DelayRadar is pulling your latest tracked orders from Shopify. This
+            ReturnSense is pulling your latest tracked orders from Shopify. This
             usually takes 1–2 minutes after install. Refresh in a moment to see
             your shipments here.
           </p>
@@ -85,7 +85,7 @@ export function ShipmentMonitorTable({
         <strong>No fulfillments synced yet.</strong>
         <p className="microcopy">
           Use <em>Queue fulfillment sync</em> above to backfill your recent
-          orders, or fulfil an order with a tracking number — DelayRadar will
+          orders, or fulfil an order with a tracking number — ReturnSense will
           start monitoring it automatically.
         </p>
       </div>

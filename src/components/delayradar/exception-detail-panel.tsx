@@ -329,7 +329,7 @@ export function ExceptionDetailPanel({
               <span className="microcopy">
                 {hasEmailProvider
                   ? "Manual sends are logged on the shipment after delivery."
-                  : "Without Postmark or SendGrid configured, DelayRadar will log this attempt as skipped."}
+                  : "Without Postmark or SendGrid configured, ReturnSense will log this attempt as skipped."}
               </span>
               <button
                 className="button"

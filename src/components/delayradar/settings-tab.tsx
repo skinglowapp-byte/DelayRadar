@@ -338,7 +338,7 @@ export function SettingsTab({
               {settings?.trackingProvider}
             </strong>
             <span className="microcopy">
-              DelayRadar stays carrier-agnostic on top of your
+              ReturnSense stays carrier-agnostic on top of your
               tracking stack.
             </span>
           </div>
@@ -456,7 +456,7 @@ export function SettingsTab({
         </div>
         <div className="split-inline">
           <span className="microcopy">
-            DelayRadar boosts inbox ranking, Slack alerts, and
+            ReturnSense boosts inbox ranking, Slack alerts, and
             digests when the shipment belongs to a VIP or
             high-value order.
           </span>
@@ -482,11 +482,10 @@ export function SettingsTab({
           </span>
         </div>
         <p className="microcopy">
-          Send every delivery exception into your own Klaviyo account as a{" "}
-          <strong>DelayRadar Delivery Exception</strong> event, so you can drive
-          it through your existing branded flows instead of ours. The event
-          carries the order, carrier, tracking number, exception type and risk
-          score.
+          Send every delivery exception into your own Klaviyo account as a
+          legacy-compatible event, so you can drive it through your existing
+          branded flows instead of ours. The event carries the order, carrier,
+          tracking number, exception type and risk score.
         </p>
         <div className="form-grid">
           <label className="field wide">

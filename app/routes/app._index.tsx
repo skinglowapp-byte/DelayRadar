@@ -1,7 +1,7 @@
 import type { LoaderFunctionArgs } from "react-router";
 import { useLoaderData } from "react-router";
 
-import { DelayRadarApp } from "@/src/components/delayradar-app";
+import { ReturnSenseApp } from "@/src/components/delayradar-app";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const url = new URL(request.url);
@@ -15,5 +15,5 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 export default function EmbeddedAppIndexRoute() {
   const { shop, host } = useLoaderData<typeof loader>();
 
-  return <DelayRadarApp initialShop={shop} initialHost={host} />;
+  return <ReturnSenseApp initialShop={shop} initialHost={host} />;
 }

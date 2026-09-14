@@ -1,12 +1,12 @@
 {
-  "name": "delayradar",
+  "name": "returnsense",
   "private": true,
   "version": "0.1.0",
   "type": "module",
   "scripts": {
     "build": "prisma generate && prisma migrate deploy && react-router build",
     "dev": "shopify app dev",
-    "start": "react-router-serve ./build/server/index.js",
+    "start": "react-router-serve ./build/server/*/index.js",
     "setup": "prisma generate && prisma migrate deploy",
     "lint": "eslint .",
     "test": "vitest run",

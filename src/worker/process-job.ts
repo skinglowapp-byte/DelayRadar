@@ -286,7 +286,7 @@ async function processNotificationJob(shipmentId: string) {
     }
 
     const text = [
-      `DelayRadar alert for ${shipment.shop.shopName ?? shipment.shop.domain}`,
+      `ReturnSense alert for ${shipment.shop.shopName ?? shipment.shop.domain}`,
       `Order: ${shipment.shopifyOrderName ?? shipment.trackingNumber}`,
       `Exception: ${titleize(shipment.latestExceptionType)}`,
       `Tracking: ${shipment.trackingNumber}`,
@@ -592,7 +592,7 @@ async function processDailyDigestJob(input: {
       .join(" · "),
   );
   const digestText = [
-    `DelayRadar daily digest for ${shop.shopName ?? shop.domain}`,
+    `ReturnSense daily digest for ${shop.shopName ?? shop.domain}`,
     `Open exceptions: ${digestEntries.length} · Action needed: ${
       digestEntries.filter((entry) => entry.actionRequired).length
     } · No-movement: ${
@@ -603,7 +603,7 @@ async function processDailyDigestJob(input: {
     ...lines,
   ].join("\n");
 
-  const DIGEST_SUBJECT = "DelayRadar daily digest";
+  const DIGEST_SUBJECT = "ReturnSense daily digest";
   const startOfDay = startOfLocalDay(shop.timezone);
 
   // Per-channel same-local-day dedupe: a channel that already delivered today
@@ -750,4 +750,3 @@ export async function processQueueJob(job: QueueJob) {
     }
   }
 }
-

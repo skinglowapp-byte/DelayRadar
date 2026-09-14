@@ -1,13 +1,64 @@
-import type { CarrierReportRow } from "@/src/lib/data/types";
+import type {
+  CarrierLaneInsight,
+  CarrierReportRow,
+} from "@/src/lib/data/types";
 import { cn } from "@/src/lib/utils";
 
 import { toneClass } from "./helpers";
 
-export function ReportsTab({ carrierReport }: { carrierReport: CarrierReportRow[] }) {
+export function ReportsTab({
+  carrierReport,
+  carrierLaneInsights,
+}: {
+  carrierReport: CarrierReportRow[];
+  carrierLaneInsights: CarrierLaneInsight[];
+}) {
   const worst = carrierReport.find((row) => row.exceptionRate > 15);
 
   return (
     <>
+      <div className="toolbar">
+        <div>
+          <span className="eyebrow">Lane intelligence</span>
+          <h2 className="section-title">Carrier routes to watch</h2>
+        </div>
+        <span className="pill muted">
+          Last 30 days
+        </span>
+      </div>
+      {carrierLaneInsights.length > 0 ? (
+        <div className="lane-grid">
+          {carrierLaneInsights.map((lane) => (
+            <div className="lane-card" key={lane.id}>
+              <div className="split-inline">
+                <div className="stack tight">
+                  <strong>{lane.laneLabel}</strong>
+                  <span className="microcopy">
+                    {lane.shipmentCount} shipments · {lane.exceptionCount} exceptions
+                  </span>
+                </div>
+                <span className={cn("pill", toneClass(lane.tone))}>
+                  {lane.exceptionRate}% exceptions
+                </span>
+              </div>
+              <div className="lane-meter" aria-hidden="true">
+                <span style={{ width: `${Math.min(lane.exceptionRate, 100)}%` }} />
+              </div>
+              <div className="lane-stat-row">
+                <span>Avg risk {lane.avgRiskScore}</span>
+                <span>{lane.noMovementCount} scan gaps</span>
+                <span>{lane.highPriorityCount} priority</span>
+              </div>
+              <p className="microcopy">{lane.recommendation}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="empty-state">
+          Lane intelligence appears once ReturnSense has enough recent shipments
+          to compare carrier and service-level outcomes.
+        </div>
+      )}
       <div className="toolbar">
         <div>
           <span className="eyebrow">Carrier performance</span>
@@ -97,7 +148,7 @@ export function ReportsTab({ carrierReport }: { carrierReport: CarrierReportRow[
         <div className="empty-state">
           No carrier data yet. Carrier reports populate once
           tracked shipments and exceptions start flowing through
-          DelayRadar.
+          ReturnSense.
         </div>
       )}
     </>

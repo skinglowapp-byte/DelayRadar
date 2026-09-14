@@ -161,7 +161,7 @@ export async function POST(request: Request) {
           prisma.shipmentNote.create({
             data: {
               shipmentId: shipment.id,
-              author: "DelayRadar",
+              author: "ReturnSense",
               body: `Accepted recommendation: ${recLabel} (action: ${recAction})`,
             },
           }),

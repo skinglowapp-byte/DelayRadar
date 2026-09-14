@@ -13,7 +13,16 @@ module.exports = {
     commonjs: true,
     es6: true,
   },
-  ignorePatterns: ["!**/.server", "!**/.client"],
+  ignorePatterns: [
+    "build/",
+    ".react-router/",
+    ".vercel/",
+    ".next/",
+    "node_modules/",
+    "tsconfig.tsbuildinfo",
+    "!**/.server",
+    "!**/.client",
+  ],
   extends: ["eslint:recommended"],
   overrides: [
     {

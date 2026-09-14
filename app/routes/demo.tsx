@@ -1,13 +1,14 @@
-import { DelayRadarApp } from "@/src/components/delayradar-app";
+import { ReturnSenseApp } from "@/src/components/delayradar-app";
 
 export function meta() {
   return [
-    { title: "DelayRadar — live demo" },
+    { title: "ReturnSense — live demo" },
     {
       name: "description",
       content:
-        "Explore a read-only DelayRadar dashboard with sample delivery exceptions.",
+        "Explore a read-only ReturnSense dashboard with sample delivery exceptions and returns-prevention workflows.",
     },
+    { name: "robots", content: "noindex,follow" },
   ];
 }
 
@@ -15,6 +16,6 @@ export function meta() {
 // to the demo dataset in the bootstrap loader). No auth required.
 export default function DemoRoute() {
   return (
-    <DelayRadarApp initialShop="demo-shop.myshopify.com" initialHost="" />
+    <ReturnSenseApp initialShop="demo-shop.myshopify.com" initialHost="" />
   );
 }

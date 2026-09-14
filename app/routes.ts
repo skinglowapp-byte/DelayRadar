@@ -9,7 +9,11 @@ export default [
   ]),
   route("api/*", "routes/api.$.ts"),
   route("demo", "routes/demo.tsx"),
+  route("favicon.ico", "routes/favicon.ico.ts"),
+  route("llms.txt", "routes/llms.txt.ts"),
   route("privacy", "routes/privacy.tsx"),
+  route("robots.txt", "routes/robots.txt.ts"),
+  route("sitemap.xml", "routes/sitemap.xml.ts"),
   route("terms", "routes/terms.tsx"),
   route("support", "routes/support.tsx"),
 ] satisfies RouteConfig;

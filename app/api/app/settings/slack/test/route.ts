@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     }
 
     const text = [
-      `DelayRadar Slack test for ${shop.shopName ?? shop.domain}`,
+      `ReturnSense Slack test for ${shop.shopName ?? shop.domain}`,
       "High-risk exception alerts and daily digests will land here once enabled.",
       "This is a test message only and is not logged against a shipment.",
     ].join("\n");

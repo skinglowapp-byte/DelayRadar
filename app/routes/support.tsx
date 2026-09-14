@@ -1,11 +1,12 @@
 export function meta() {
   return [
-    { title: "Support — DelayRadar" },
+    { title: "Support — ReturnSense" },
     {
       name: "description",
       content:
-        "Get help with DelayRadar: contact support, setup FAQs, and links to privacy and terms.",
+        "Get help with ReturnSense: contact support, setup FAQs, and links to privacy and terms.",
     },
+    { name: "robots", content: "noindex,follow" },
   ];
 }
 
@@ -25,7 +26,7 @@ export default function SupportRoute() {
       <h1>Support</h1>
 
       <p>
-        Need help with DelayRadar? We&apos;re here for you. Reach out using any
+        Need help with ReturnSense? We&apos;re here for you. Reach out using any
         of the options below and we&apos;ll get back to you as quickly as
         possible.
       </p>
@@ -48,14 +49,14 @@ export default function SupportRoute() {
 
       <h3>How do I connect my store?</h3>
       <p>
-        Install DelayRadar from the Shopify App Store. The app will guide you
+        Install ReturnSense from the Shopify App Store. The app will guide you
         through OAuth authorization and automatically run your first fulfillment
         sync.
       </p>
 
       <h3>How do I set up email notifications?</h3>
       <p>
-        Email delivery is managed by DelayRadar — there is no email provider to
+        Email delivery is managed by ReturnSense — there is no email provider to
         configure on your end. Use the <strong>Templates</strong> tab to
         customize the subject and body for each exception type, and the{" "}
         <strong>Settings</strong> tab to choose which exceptions trigger an
@@ -72,14 +73,14 @@ export default function SupportRoute() {
 
       <h3>What tracking providers are supported?</h3>
       <p>
-        DelayRadar currently uses EasyPost for carrier tracking. This works
+        ReturnSense currently uses EasyPost for carrier tracking. This works
         with all major carriers (USPS, UPS, FedEx, DHL, and more) without
         changing your existing shipping tools.
       </p>
 
       <h3>How do I uninstall?</h3>
       <p>
-        You can uninstall DelayRadar from your Shopify admin under{" "}
+        You can uninstall ReturnSense from your Shopify admin under{" "}
         <strong>Apps</strong>. Your access token is revoked immediately and all
         data is deleted upon receiving Shopify&apos;s data erasure request.
       </p>

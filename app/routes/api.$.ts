@@ -142,7 +142,7 @@ async function dispatchShopifyTopic(
 
   if (normalizedTopic === "customers/data_request") {
     // GDPR: compile the data we hold about this customer so the merchant can
-    // fulfil the request. DelayRadar has no automated export channel, so we
+    // fulfil the request. ReturnSense has no automated export channel, so we
     // log a structured, actionable summary (record ids, not raw PII) for the
     // operator to action within the 30-day window.
     if (!prisma) return;

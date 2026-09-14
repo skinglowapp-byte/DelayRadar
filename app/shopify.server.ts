@@ -18,13 +18,13 @@ const scopes = getShopifyScopes()
 const shopify = shopifyApp({
   apiKey: process.env.SHOPIFY_API_KEY,
   apiSecretKey: process.env.SHOPIFY_API_SECRET || "",
-  apiVersion: ApiVersion.October25,
+  apiVersion: ApiVersion.April26,
   scopes,
   appUrl: getAppUrl(),
   authPathPrefix: "/auth",
   sessionStorage: new PrismaSessionStorage(db),
   distribution: AppDistribution.AppStore,
-  // No `billing` config: DelayRadar uses Shopify Managed Pricing (configured in
+  // No `billing` config: ReturnSense uses Shopify Managed Pricing (configured in
   // the Partner Dashboard), which is incompatible with the Billing API.
   future: {
     expiringOfflineAccessTokens: true,
@@ -71,7 +71,7 @@ const shopify = shopifyApp({
 });
 
 export default shopify;
-export const apiVersion = ApiVersion.October25;
+export const apiVersion = ApiVersion.April26;
 export const addDocumentResponseHeaders = shopify.addDocumentResponseHeaders;
 export const authenticate = shopify.authenticate;
 export const unauthenticated = shopify.unauthenticated;

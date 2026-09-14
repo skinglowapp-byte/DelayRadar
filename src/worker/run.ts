@@ -19,7 +19,7 @@ async function main() {
   const { claimed, processed, failed } = await runJobBatch(10);
 
   if (claimed === 0) {
-    console.log("No pending DelayRadar jobs.");
+    console.log("No pending ReturnSense jobs.");
     return;
   }
 

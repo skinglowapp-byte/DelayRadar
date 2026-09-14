@@ -13,6 +13,8 @@ export function OverviewTab({
   onSelectException: (id: string) => void;
   onNavigateTab: (tab: string) => void;
 }) {
+  const topLane = data?.carrierLaneInsights[0] ?? null;
+
   return (
     <>
       {data?.onboarding && !data.onboarding.allComplete ? (
@@ -82,6 +84,29 @@ export function OverviewTab({
       {data?.carrierCoverage ? (
         <CarrierCoverageBanner coverage={data.carrierCoverage} />
       ) : null}
+      {topLane ? (
+        <div className={cn("lane-intel-card", topLane.tone)}>
+          <div>
+            <span className="eyebrow">Carrier lane intelligence</span>
+            <h2 className="section-title">{topLane.laneLabel}</h2>
+            <p className="section-copy">{topLane.recommendation}</p>
+          </div>
+          <div className="lane-intel-stats">
+            <div>
+              <strong>{topLane.exceptionRate}%</strong>
+              <span>Exception rate</span>
+            </div>
+            <div>
+              <strong>{topLane.avgRiskScore}</strong>
+              <span>Avg risk</span>
+            </div>
+            <div>
+              <strong>{topLane.highPriorityCount}</strong>
+              <span>Priority orders</span>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <ShipmentMonitorTable
         rows={data?.recentShipments ?? []}
         backfill={data?.backfill}
@@ -106,9 +131,9 @@ export function OverviewTab({
       <div className="callout">
         <strong>Workflow focus</strong>
         <p className="microcopy">
-          DelayRadar stays tightly scoped to delivery exceptions and
-          proactive comms. That is the single highest-ROI slice before
-          you layer on returns or auto-refund logic.
+          ReturnSense starts with delivery exceptions because they are the
+          highest-ROI return-prevention signal. ReturnSense now feeds the unified
+          returns and recovery workflow.
         </p>
       </div>
     </>

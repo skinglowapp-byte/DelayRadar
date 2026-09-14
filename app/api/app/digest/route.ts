@@ -60,7 +60,7 @@ export async function POST(request: Request) {
           shipmentId: null,
           channel: NotificationChannel.SLACK,
           status: NotificationDeliveryStatus.SENT,
-          subject: "DelayRadar daily digest",
+          subject: "ReturnSense daily digest",
           sentAt: {
             gte: startOfDay,
           },

@@ -10,6 +10,7 @@ import { getDemoAppData, getInstallState } from "@/src/lib/data/mock";
 import type {
   AppBootstrap,
   BackfillStatus,
+  CarrierLaneInsight,
   CarrierCoverage,
   CarrierReportRow,
   ExceptionDetail,
@@ -20,6 +21,8 @@ import type {
   NotificationRuleSummary,
   OnboardingChecklist,
   OnboardingStep,
+  RecommendationAction,
+  RecoveryOutcomeSummary,
   SyncHealthSummary,
   TemplateRow,
   TimelineEntry,
@@ -175,7 +178,7 @@ function mapTimeline(
       id: `${shipment.id}-no-events`,
       title: "Tracker registered",
       body:
-        "DelayRadar is monitoring this tracking number, but the carrier has not posted a recent checkpoint yet.",
+        "ReturnSense is monitoring this tracking number, but the carrier has not posted a recent checkpoint yet.",
       occurredAt: formatRelativeTime(checkpointDate(shipment)),
       tone: "muted",
     },
@@ -306,6 +309,7 @@ function buildExplicitExceptionArtifact(
       carrierRiskScore: shipment.riskScore,
       priorityLabel: priority.priorityLabel,
       priorityReasons: priority.priorityReasons,
+      orderValueCents: shipment.orderValueCents,
       orderValueLabel:
         typeof shipment.orderValueCents === "number"
           ? formatCurrency(
@@ -418,6 +422,7 @@ function buildStaleShipmentArtifact(
       carrierRiskScore,
       priorityLabel: priority.priorityLabel,
       priorityReasons: priority.priorityReasons,
+      orderValueCents: shipment.orderValueCents,
       orderValueLabel:
         typeof shipment.orderValueCents === "number"
           ? formatCurrency(
@@ -555,6 +560,310 @@ async function buildCarrierReport(shopId: string): Promise<CarrierReportRow[]> {
   }
 
   return rows.sort((a, b) => b.exceptionRate - a.exceptionRate);
+}
+
+function normalizeServiceLevel(value: string | null | undefined) {
+  if (!value?.trim()) {
+    return "Unknown service";
+  }
+
+  return value.trim();
+}
+
+function laneTone(input: {
+  exceptionRate: number;
+  avgRiskScore: number;
+  noMovementCount: number;
+}): "good" | "warn" | "bad" {
+  if (
+    input.exceptionRate >= 35 ||
+    input.avgRiskScore >= 75 ||
+    input.noMovementCount >= 3
+  ) {
+    return "bad";
+  }
+
+  if (
+    input.exceptionRate >= 15 ||
+    input.avgRiskScore >= 45 ||
+    input.noMovementCount > 0
+  ) {
+    return "warn";
+  }
+
+  return "good";
+}
+
+function laneRecommendation(input: {
+  carrier: string;
+  serviceLevel: string;
+  exceptionRate: number;
+  noMovementCount: number;
+  highPriorityCount: number;
+  avgRiskScore: number;
+}) {
+  if (input.noMovementCount >= 3) {
+    return `Audit ${input.carrier} ${input.serviceLevel} for scan gaps before promising this lane on high-value orders.`;
+  }
+
+  if (input.highPriorityCount > 0 && input.avgRiskScore >= 65) {
+    return `Route VIP or high-value shipments away from this lane until risk drops below 65.`;
+  }
+
+  if (input.exceptionRate >= 20) {
+    return `Review SLA language and proactive delay messaging for this lane.`;
+  }
+
+  return `Keep monitoring; this lane is currently within the expected exception range.`;
+}
+
+function recommendationTone(action: RecommendationAction): "good" | "warn" | "bad" | "muted" {
+  switch (action) {
+    case "REFUND":
+    case "RESEND":
+    case "REPLACEMENT_REVIEW":
+      return "bad";
+    case "CARRIER_TRACE":
+    case "CONTACT_CUSTOMER":
+      return "warn";
+    case "WAIT":
+    default:
+      return "muted";
+  }
+}
+
+function buildRecoveryOutcomeSummary(
+  exceptionDetails: ExceptionDetail[],
+  currencyCode: string,
+): RecoveryOutcomeSummary {
+  const actionCounts = new Map<
+    RecommendationAction,
+    { label: string; count: number; tone: "good" | "warn" | "bad" | "muted" }
+  >();
+  let automatableCount = 0;
+  let valueAtRiskCents = 0;
+
+  for (const detail of exceptionDetails) {
+    const { recommendation } = detail;
+    const entry = actionCounts.get(recommendation.action) ?? {
+      label: recommendation.label,
+      count: 0,
+      tone: recommendationTone(recommendation.action),
+    };
+
+    entry.count += 1;
+    actionCounts.set(recommendation.action, entry);
+
+    if (recommendation.automatable) {
+      automatableCount += 1;
+    }
+
+    if (
+      typeof detail.orderValueCents === "number" &&
+      (recommendation.action === "REFUND" ||
+        recommendation.action === "RESEND" ||
+        recommendation.action === "REPLACEMENT_REVIEW")
+    ) {
+      valueAtRiskCents += detail.orderValueCents;
+    }
+  }
+
+  const recommendedActionMix = Array.from(actionCounts.entries())
+    .map(([action, entry]) => ({ action, ...entry }))
+    .sort((left, right) => right.count - left.count);
+
+  const revenueDecisions = exceptionDetails.filter(({ recommendation }) =>
+    ["REFUND", "RESEND", "REPLACEMENT_REVIEW"].includes(recommendation.action),
+  );
+  const customerActionCases = exceptionDetails.filter(
+    (detail) => detail.customerAction || detail.recommendation.automatable,
+  );
+  const carrierTraceCases = exceptionDetails.filter(
+    (detail) => detail.recommendation.action === "CARRIER_TRACE",
+  );
+
+  const experiments: RecoveryOutcomeSummary["experiments"] = [
+    {
+      id: "revenue-decision-threshold",
+      title: "Resend versus refund threshold",
+      hypothesis:
+        "VIP and high-value delivery failures should default to resends only when the order value justifies the margin tradeoff.",
+      playbook:
+        "Compare refund, resend, and wait outcomes for revenue-impacting exceptions before changing the default policy.",
+      sampleSize: revenueDecisions.length,
+      confidence: revenueDecisions.length >= 8 ? "high" : revenueDecisions.length >= 3 ? "medium" : "low",
+      tone: revenueDecisions.length > 0 ? "bad" : "muted",
+    },
+    {
+      id: "first-contact-save-rate",
+      title: "First-contact save rate",
+      hypothesis:
+        "Fast pickup, failed-delivery, and address-confirmation messages should reduce refund pressure before support is contacted.",
+      playbook:
+        "Track cases where automated customer contact happens before a return request, then compare resolved versus escalated cases.",
+      sampleSize: customerActionCases.length,
+      confidence: customerActionCases.length >= 10 ? "high" : customerActionCases.length >= 4 ? "medium" : "low",
+      tone: customerActionCases.length > 0 ? "warn" : "muted",
+    },
+    {
+      id: "carrier-trace-window",
+      title: "Carrier trace timing",
+      hypothesis:
+        "Opening traces earlier on no-movement shipments can prevent unnecessary replacements on lanes with repeated scan gaps.",
+      playbook:
+        "Test trace timing by carrier lane and measure whether packages resume movement before a refund or resend decision.",
+      sampleSize: carrierTraceCases.length,
+      confidence: carrierTraceCases.length >= 6 ? "high" : carrierTraceCases.length >= 2 ? "medium" : "low",
+      tone: carrierTraceCases.length > 0 ? "warn" : "muted",
+    },
+  ];
+
+  return {
+    recommendedActionMix,
+    decisionCount: exceptionDetails.length,
+    automatableCount,
+    estimatedValueAtRiskLabel: formatCurrency(valueAtRiskCents / 100, currencyCode),
+    experiments,
+  };
+}
+
+async function buildCarrierLaneInsights(
+  shopId: string,
+  prioritySettings: {
+    priorityOrderValueThresholdCents: number;
+    vipTagPattern: string;
+    currencyCode: string;
+  },
+): Promise<CarrierLaneInsight[]> {
+  if (!prisma) {
+    return [];
+  }
+
+  const since = new Date(Date.now() - 30 * 24 * 3600000);
+  const shipments = await prisma.shipment.findMany({
+    where: {
+      shopId,
+      createdAt: { gte: since },
+    },
+    select: {
+      trackingCarrier: true,
+      shippingMethodLabel: true,
+      latestExceptionType: true,
+      riskScore: true,
+      orderValueCents: true,
+      orderTags: true,
+    },
+  });
+
+  const lanes = new Map<
+    string,
+    {
+      carrier: string;
+      serviceLevel: string;
+      shipmentCount: number;
+      exceptionCount: number;
+      noMovementCount: number;
+      highPriorityCount: number;
+      riskScoreTotal: number;
+    }
+  >();
+
+  for (const shipment of shipments) {
+    const carrier = shipment.trackingCarrier?.trim() || "Unknown carrier";
+    const serviceLevel = normalizeServiceLevel(shipment.shippingMethodLabel);
+    const key = `${carrier}::${serviceLevel}`;
+    let lane = lanes.get(key);
+
+    if (!lane) {
+      lane = {
+        carrier,
+        serviceLevel,
+        shipmentCount: 0,
+        exceptionCount: 0,
+        noMovementCount: 0,
+        highPriorityCount: 0,
+        riskScoreTotal: 0,
+      };
+      lanes.set(key, lane);
+    }
+
+    const priority = evaluateShipmentPriority({
+      baseRiskScore: shipment.riskScore,
+      orderValueCents: shipment.orderValueCents,
+      orderTags: shipment.orderTags,
+      shippingMethodLabel: shipment.shippingMethodLabel,
+      priorityOrderValueThresholdCents:
+        prioritySettings.priorityOrderValueThresholdCents,
+      vipTagPattern: prioritySettings.vipTagPattern,
+      currencyCode: prioritySettings.currencyCode,
+    });
+
+    lane.shipmentCount += 1;
+    lane.riskScoreTotal += priority.effectiveRiskScore;
+
+    if (shipment.latestExceptionType) {
+      lane.exceptionCount += 1;
+    }
+
+    if (shipment.latestExceptionType === "NO_MOVEMENT") {
+      lane.noMovementCount += 1;
+    }
+
+    if (priority.priorityLabel !== "Standard") {
+      lane.highPriorityCount += 1;
+    }
+  }
+
+  return Array.from(lanes.values())
+    .filter((lane) => lane.shipmentCount >= 2 || lane.exceptionCount > 0)
+    .map((lane) => {
+      const exceptionRate = Math.round(
+        (lane.exceptionCount / lane.shipmentCount) * 100,
+      );
+      const avgRiskScore = Math.round(
+        lane.riskScoreTotal / lane.shipmentCount,
+      );
+      const tone = laneTone({
+        exceptionRate,
+        avgRiskScore,
+        noMovementCount: lane.noMovementCount,
+      });
+
+      return {
+        id: `${lane.carrier}-${lane.serviceLevel}`.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+        laneLabel: `${lane.carrier} · ${lane.serviceLevel}`,
+        carrier: lane.carrier,
+        serviceLevel: lane.serviceLevel,
+        shipmentCount: lane.shipmentCount,
+        exceptionCount: lane.exceptionCount,
+        exceptionRate,
+        noMovementCount: lane.noMovementCount,
+        highPriorityCount: lane.highPriorityCount,
+        avgRiskScore,
+        tone,
+        recommendation: laneRecommendation({
+          carrier: lane.carrier,
+          serviceLevel: lane.serviceLevel,
+          exceptionRate,
+          noMovementCount: lane.noMovementCount,
+          highPriorityCount: lane.highPriorityCount,
+          avgRiskScore,
+        }),
+      };
+    })
+    .sort((left, right) => {
+      if (left.tone !== right.tone) {
+        const rank = { bad: 0, warn: 1, good: 2 };
+        return rank[left.tone] - rank[right.tone];
+      }
+
+      if (right.exceptionRate !== left.exceptionRate) {
+        return right.exceptionRate - left.exceptionRate;
+      }
+
+      return right.avgRiskScore - left.avgRiskScore;
+    })
+    .slice(0, 5);
 }
 
 function toShipmentTone(input: {
@@ -969,6 +1278,10 @@ export async function getAppBootstrap(
 
   const exceptionInbox = exceptionArtifacts.map((item) => item.row);
   const exceptionDetails = exceptionArtifacts.map((item) => item.detail);
+  const recoveryOutcome = buildRecoveryOutcomeSummary(
+    exceptionDetails,
+    currencyCode,
+  );
   const openExceptions = exceptionInbox.length;
   const actionRequired = exceptionInbox.filter(
     (shipment) => shipment.customerAction,
@@ -1099,8 +1412,19 @@ export async function getAppBootstrap(
         : "good",
   }));
 
-  const [carrierReport, health, backfill, carrierCoverage] = await Promise.all([
+  const [
+    carrierReport,
+    carrierLaneInsights,
+    health,
+    backfill,
+    carrierCoverage,
+  ] = await Promise.all([
     buildCarrierReport(shop.id),
+    buildCarrierLaneInsights(shop.id, {
+      priorityOrderValueThresholdCents,
+      vipTagPattern,
+      currencyCode,
+    }),
     buildSyncHealth(shop.id, shop.lastSyncedAt),
     buildBackfillStatus(shop.id, shop.lastSyncedAt, trackedShipments),
     buildCarrierCoverage(shop.id),
@@ -1122,7 +1446,7 @@ export async function getAppBootstrap(
       statusLabel: shop.isInstalled
         ? "Live store connected and monitoring shipments"
         : "Install incomplete",
-      modeLabel: "EasyPost tracking-first MVP",
+      modeLabel: "ReturnSense post-purchase ops",
       lastSyncedAt: formatRelativeTime(shop.lastSyncedAt),
     },
     metrics,
@@ -1132,6 +1456,8 @@ export async function getAppBootstrap(
     templates: templateRows,
     timeline,
     carrierReport,
+    carrierLaneInsights,
+    recoveryOutcome,
     health,
     onboarding,
     backfill,
@@ -1163,7 +1489,8 @@ export async function getAppBootstrap(
     },
     assumptions: [
       "This store is connected with an offline Shopify token and a tracking-first EasyPost workflow.",
-      "Exception notification rules are scoped to proactive comms, not returns or auto-refunds yet.",
+      "Carrier lane intelligence uses the last 30 days of tracked shipment outcomes to flag avoidable SLA risk.",
+      "Delivery exceptions now feed a unified returns-prevention and refund-review workflow.",
       "Slack escalation stays focused on high-risk shipments so support teams only see the exceptions that matter.",
     ],
   };

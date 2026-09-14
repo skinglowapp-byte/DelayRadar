@@ -9,7 +9,7 @@ export function getDemoAppData(prefilledShop = ""): AppBootstrap {
       name: "Demo Shop",
       email: "ops@demo-shop.com",
       statusLabel: "Demo mode with seeded exception scenarios",
-      modeLabel: "EasyPost tracking-first MVP",
+      modeLabel: "ReturnSense post-purchase ops",
       lastSyncedAt: "5 minutes ago",
     },
     metrics: [
@@ -182,6 +182,7 @@ export function getDemoAppData(prefilledShop = ""): AppBootstrap {
           'VIP tag matched "vip".',
           'Order value $218.00 exceeds the $150.00 priority threshold.',
         ],
+        orderValueCents: 21800,
         orderValueLabel: "$218.00",
         shippingMethodLabel: "UPS Next Day Air",
         lastCheckpointAt: "22 minutes ago",
@@ -226,7 +227,7 @@ export function getDemoAppData(prefilledShop = ""): AppBootstrap {
             templateName: "Direct notification",
             subject: "High-risk failed delivery",
             bodyPreview:
-              "DelayRadar flagged #1045 because the carrier requires customer action after a failed attempt.",
+              "ReturnSense flagged #1045 because the carrier requires customer action after a failed attempt.",
             sentAt: "9 minutes ago",
           },
         ],
@@ -267,6 +268,7 @@ export function getDemoAppData(prefilledShop = ""): AppBootstrap {
         priorityReasons: [
           'Order value $184.00 exceeds the $150.00 priority threshold.',
         ],
+        orderValueCents: 18400,
         orderValueLabel: "$184.00",
         shippingMethodLabel: "UPS Ground",
         lastCheckpointAt: "48 minutes ago",
@@ -331,6 +333,7 @@ export function getDemoAppData(prefilledShop = ""): AppBootstrap {
         carrierRiskScore: 48,
         priorityLabel: "Standard",
         priorityReasons: [],
+        orderValueCents: 7200,
         orderValueLabel: "$72.00",
         shippingMethodLabel: "Local pickup point",
         lastCheckpointAt: "3 hours ago",
@@ -398,6 +401,7 @@ export function getDemoAppData(prefilledShop = ""): AppBootstrap {
         priorityReasons: [
           'Shipping method "USPS Priority Mail" indicates an expedited order.',
         ],
+        orderValueCents: 5800,
         orderValueLabel: "$58.00",
         shippingMethodLabel: "USPS Priority Mail",
         lastCheckpointAt: "6 hours ago",
@@ -431,7 +435,7 @@ export function getDemoAppData(prefilledShop = ""): AppBootstrap {
             templateName: "Delayed shipment",
             subject: "We’re already on your shipment delay",
             bodyPreview:
-              "DelayRadar held the message because this store only auto-notifies after a longer no-movement window.",
+              "ReturnSense held the message because this store only auto-notifies after a longer no-movement window.",
             sentAt: "5 hours ago",
           },
         ],
@@ -465,6 +469,7 @@ export function getDemoAppData(prefilledShop = ""): AppBootstrap {
         priorityReasons: [
           'Order value $196.00 exceeds the $150.00 priority threshold.',
         ],
+        orderValueCents: 19600,
         orderValueLabel: "$196.00",
         shippingMethodLabel: "UPS Ground",
         lastCheckpointAt: "4 days ago",
@@ -498,7 +503,7 @@ export function getDemoAppData(prefilledShop = ""): AppBootstrap {
             templateName: "Delayed shipment",
             subject: "We’re watching #1028 closely",
             bodyPreview:
-              "DelayRadar held the outbound message until the shipment crossed the store's no-movement threshold.",
+              "ReturnSense held the outbound message until the shipment crossed the store's no-movement threshold.",
             sentAt: "1 day ago",
           },
         ],
@@ -619,7 +624,7 @@ export function getDemoAppData(prefilledShop = ""): AppBootstrap {
       {
         id: "evt_demo_2",
         title: "Tracker created from Shopify fulfillment",
-        body: "DelayRadar registered a standalone EasyPost tracker using an existing tracking number from a Shopify fulfillment webhook.",
+        body: "ReturnSense registered a standalone EasyPost tracker using an existing tracking number from a Shopify fulfillment webhook.",
         occurredAt: "27 minutes ago",
         tone: "good",
       },
@@ -663,6 +668,119 @@ export function getDemoAppData(prefilledShop = ""): AppBootstrap {
         avgResolutionHours: null,
       },
     ],
+    carrierLaneInsights: [
+      {
+        id: "usps-ground-advantage",
+        laneLabel: "USPS · Ground Advantage",
+        carrier: "USPS",
+        serviceLevel: "Ground Advantage",
+        shipmentCount: 28,
+        exceptionCount: 9,
+        exceptionRate: 32,
+        noMovementCount: 4,
+        highPriorityCount: 6,
+        avgRiskScore: 72,
+        tone: "bad",
+        recommendation:
+          "Audit USPS Ground Advantage for scan gaps before promising this lane on high-value orders.",
+      },
+      {
+        id: "dhl-ecommerce-parcel-ground",
+        laneLabel: "DHL eCommerce · Parcel Ground",
+        carrier: "DHL eCommerce",
+        serviceLevel: "Parcel Ground",
+        shipmentCount: 18,
+        exceptionCount: 4,
+        exceptionRate: 22,
+        noMovementCount: 1,
+        highPriorityCount: 2,
+        avgRiskScore: 51,
+        tone: "warn",
+        recommendation:
+          "Review SLA language and proactive delay messaging for this lane.",
+      },
+      {
+        id: "ups-ground",
+        laneLabel: "UPS · Ground",
+        carrier: "UPS",
+        serviceLevel: "Ground",
+        shipmentCount: 31,
+        exceptionCount: 3,
+        exceptionRate: 10,
+        noMovementCount: 0,
+        highPriorityCount: 5,
+        avgRiskScore: 28,
+        tone: "good",
+        recommendation:
+          "Keep monitoring; this lane is currently within the expected exception range.",
+      },
+    ],
+    recoveryOutcome: {
+      recommendedActionMix: [
+        {
+          action: "CONTACT_CUSTOMER",
+          label: "Customer recovery outreach",
+          count: 7,
+          tone: "warn",
+        },
+        {
+          action: "REPLACEMENT_REVIEW",
+          label: "Replacement or refund review",
+          count: 4,
+          tone: "bad",
+        },
+        {
+          action: "CARRIER_TRACE",
+          label: "Carrier trace",
+          count: 3,
+          tone: "warn",
+        },
+        {
+          action: "WAIT",
+          label: "Monitor carrier updates",
+          count: 4,
+          tone: "muted",
+        },
+      ],
+      decisionCount: 18,
+      automatableCount: 7,
+      estimatedValueAtRiskLabel: "$1,420.00",
+      experiments: [
+        {
+          id: "revenue-decision-threshold",
+          title: "Resend versus refund threshold",
+          hypothesis:
+            "VIP and high-value delivery failures should default to resends only when the order value justifies the margin tradeoff.",
+          playbook:
+            "Compare refund, resend, and wait outcomes for revenue-impacting exceptions before changing the default policy.",
+          sampleSize: 4,
+          confidence: "medium",
+          tone: "bad",
+        },
+        {
+          id: "first-contact-save-rate",
+          title: "First-contact save rate",
+          hypothesis:
+            "Fast pickup, failed-delivery, and address-confirmation messages should reduce refund pressure before support is contacted.",
+          playbook:
+            "Track cases where automated customer contact happens before a return request, then compare resolved versus escalated cases.",
+          sampleSize: 7,
+          confidence: "medium",
+          tone: "warn",
+        },
+        {
+          id: "carrier-trace-window",
+          title: "Carrier trace timing",
+          hypothesis:
+            "Opening traces earlier on no-movement shipments can prevent unnecessary replacements on lanes with repeated scan gaps.",
+          playbook:
+            "Test trace timing by carrier lane and measure whether packages resume movement before a refund or resend decision.",
+          sampleSize: 3,
+          confidence: "medium",
+          tone: "warn",
+        },
+      ],
+    },
     health: {
       lastSyncedAt: new Date(Date.now() - 300000).toISOString(),
       syncAgeLabel: "5 minutes ago",
@@ -775,7 +893,7 @@ export function getDemoAppData(prefilledShop = ""): AppBootstrap {
     },
     assumptions: [
       "Designed for Shopify brands shipping roughly 200 to 5,000 orders per month.",
-      "MVP centers on delivery exceptions, proactive email, and Slack alerting rather than label generation.",
+      "MVP combines delivery exceptions, proactive email, Slack alerting, and returns-prevention workflow rather than label generation.",
       "Tracking-first integration uses EasyPost so merchants can keep their existing shipping stack.",
     ],
   };
@@ -793,6 +911,48 @@ export function getInstallState(prefilledShop = ""): AppBootstrap {
     templates: [],
     timeline: [],
     carrierReport: [],
+    carrierLaneInsights: [],
+    recoveryOutcome: {
+      recommendedActionMix: [],
+      decisionCount: 0,
+      automatableCount: 0,
+      estimatedValueAtRiskLabel: "$0.00",
+      experiments: [
+        {
+          id: "revenue-decision-threshold",
+          title: "Resend versus refund threshold",
+          hypothesis:
+            "VIP and high-value delivery failures should default to resends only when the order value justifies the margin tradeoff.",
+          playbook:
+            "Compare refund, resend, and wait outcomes for revenue-impacting exceptions before changing the default policy.",
+          sampleSize: 0,
+          confidence: "low",
+          tone: "muted",
+        },
+        {
+          id: "first-contact-save-rate",
+          title: "First-contact save rate",
+          hypothesis:
+            "Fast pickup, failed-delivery, and address-confirmation messages should reduce refund pressure before support is contacted.",
+          playbook:
+            "Track cases where automated customer contact happens before a return request, then compare resolved versus escalated cases.",
+          sampleSize: 0,
+          confidence: "low",
+          tone: "muted",
+        },
+        {
+          id: "carrier-trace-window",
+          title: "Carrier trace timing",
+          hypothesis:
+            "Opening traces earlier on no-movement shipments can prevent unnecessary replacements on lanes with repeated scan gaps.",
+          playbook:
+            "Test trace timing by carrier lane and measure whether packages resume movement before a refund or resend decision.",
+          sampleSize: 0,
+          confidence: "low",
+          tone: "muted",
+        },
+      ],
+    },
     health: {
       lastSyncedAt: null,
       syncAgeLabel: "Never",
@@ -902,7 +1062,7 @@ export function getInstallState(prefilledShop = ""): AppBootstrap {
       ],
     },
     assumptions: [
-      "Connect a Shopify store first, then DelayRadar can ingest fulfillments and register trackers.",
+      "Connect a Shopify store first, then ReturnSense can ingest fulfillments and register trackers.",
       "EasyPost tracker creation is queued so webhook delivery stays fast and idempotent.",
       "Customer email templates are editable before live exception events start flowing.",
     ],
