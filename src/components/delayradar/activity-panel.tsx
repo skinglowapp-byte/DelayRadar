@@ -5,10 +5,8 @@ import { toneClass } from "./helpers";
 
 export function ActivityPanel({
   timeline,
-  assumptions,
 }: {
   timeline: AppBootstrap["timeline"];
-  assumptions: string[];
 }) {
   return (
     <>
@@ -29,19 +27,6 @@ export function ActivityPanel({
             </div>
           </div>
         ))}
-      </div>
-      <div>
-        <span className="eyebrow">Assumptions</span>
-        <div className="timeline">
-          {assumptions.map((item) => (
-            <div className="timeline-item" key={item}>
-              <span className="timeline-mark" />
-              <div className="timeline-body">
-                <span className="microcopy">{item}</span>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     </>
   );

@@ -1095,15 +1095,6 @@ export function ReturnSenseApp({
                         Last synced {data?.shop?.lastSyncedAt}
                       </span>
                     </div>
-                    <div className="callout">
-                      <strong>Why this niche</strong>
-                      <p className="microcopy">
-                        Support leads and ops managers need one place for the
-                        messy post-purchase moments: stuck shipments, preventable
-                        returns, refund reviews, and customer messaging that
-                        happens before frustration peaks.
-                      </p>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -1274,7 +1265,6 @@ export function ReturnSenseApp({
                   ) : (
                     <ActivityPanel
                       timeline={data?.timeline ?? []}
-                      assumptions={data?.assumptions ?? []}
                     />
                   )}
                 </div>
