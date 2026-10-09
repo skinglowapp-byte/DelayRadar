@@ -50,9 +50,10 @@ Emails customers first; sends events to Klaviyo flows and alerts to Slack
 ```
 
 ### Demo store URL
-```
-https://www.returnsenseapp.com/demo
-```
+Leave blank unless you have a real Shopify store with the app installed —
+this field only accepts a Shopify store URL. Put the web demo
+(`https://www.returnsenseapp.com/demo`) under **Resources → Additional app
+documentation** instead.
 
 ### Screenshots (minimum 3, 1600×900 PNG)
 Retake under the ReturnSense name (the March set shows DelayRadar). Use /demo:
