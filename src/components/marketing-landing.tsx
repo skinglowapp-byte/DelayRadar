@@ -1,19 +1,19 @@
 const features = [
   {
-    title: "Delivery recovery before the ticket",
-    body: "ReturnSense catches delays, failed attempts, address issues, uncollected pickups, lost-in-transit, and packages that simply stopped scanning.",
+    title: "Post-purchase margin protection",
+    body: "ReturnSense spots the carrier events that quietly become refunds, replacements, support tickets, and lost repeat customers.",
   },
   {
-    title: "Returns prevention, not just returns handling",
-    body: "ReturnSense shows which delivery issues are likely to turn into refunds, replacements, exchanges, or chargeback conversations.",
+    title: "Recovery decisions, not status pages",
+    body: "Each case is routed toward wait, contact, trace, resend, replacement, refund review, or retention follow-up based on risk and value.",
   },
   {
     title: "Reaches the customer first",
     body: "The right message goes out automatically, from your brand, while there's still time to save the order relationship.",
   },
   {
-    title: "Fires into the tools you already use",
-    body: "Push exception events into Klaviyo or Slack. ReturnSense gives your existing stack better signals instead of forcing another workflow.",
+    title: "Signals for the tools you already use",
+    body: "Push recovery events into Klaviyo or Slack. ReturnSense gives your existing stack cleaner post-purchase decisions instead of forcing another workflow.",
   },
   {
     title: "Triages by what it costs you",
@@ -34,7 +34,7 @@ const steps = [
   {
     n: "2",
     title: "We watch for trouble",
-    body: "Every parcel is monitored for the scans that mean something has gone wrong, then ranked by what that failure will actually cost you.",
+    body: "Every parcel is monitored for the signals that mean margin or retention is at risk, then ranked by what that failure will actually cost you.",
   },
   {
     n: "3",
@@ -87,7 +87,7 @@ const schema = {
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
       description:
-        "A Shopify post-purchase recovery app that detects delivery exceptions, prioritizes orders by revenue risk, and helps prevent avoidable returns.",
+        "A Shopify post-purchase recovery command center that detects carrier exceptions, prioritizes orders by margin risk, and routes each case toward the right recovery decision.",
       offers: {
         "@type": "Offer",
         price: "9.99",
@@ -99,8 +99,8 @@ const schema = {
         audienceType: "Shopify merchants",
       },
       featureList: [
-        "Delivery exception recovery",
-        "Returns prevention workflow",
+        "Carrier exception intelligence",
+        "Post-purchase margin protection",
         "Carrier lane intelligence",
         "Recovery outcome engine",
         "Klaviyo and Slack exception signals",
@@ -179,7 +179,7 @@ export function MarketingLanding() {
         </a>
         <nav className="lp-nav-links">
           <a href="#how">How it works</a>
-          <a href="#compare">vs. tracking apps</a>
+          <a href="#compare">Why it is different</a>
           <a href="#features">Features</a>
           <a href="#pricing">Pricing</a>
           <a href="/support">Support</a>
@@ -193,13 +193,12 @@ export function MarketingLanding() {
         <div className="lp-hero-copy">
           <span className="badge hot">For Shopify brands shipping 200–5,000 orders/mo</span>
           <h1 className="lp-headline">
-            One Shopify app for delivery problems before they become returns.
+            The command center for Shopify orders after checkout gets messy.
           </h1>
           <p className="lp-sub">
-            Keep your tracking and returns tools. ReturnSense is the
-            post-purchase ops layer that catches delivery failures, contacts the
-            customer first, and routes each order toward recovery, exchange,
-            resend, or refund review.
+            Keep your tracking and returns tools. ReturnSense protects the
+            expensive middle: the moment a carrier issue becomes a customer
+            recovery, resend, refund, or retention decision.
           </p>
 
           <form
@@ -233,16 +232,14 @@ export function MarketingLanding() {
       <section className="lp-problem">
         <div className="lp-problem-inner">
           <h2 className="lp-section-title">
-            Tracking tells your customer where the parcel is. Returns tools wait
-            for the return request. The expensive moment is in between.
+            Tracking shows where the parcel is. Returns tools process the
+            request after it starts. Margin leaks in the middle.
           </h2>
           <p className="lp-section-copy">
-            Your tracking page is built for the shipment that arrives. The one
-            that doesn’t arrive becomes an angry email, a refund request, and a
-            customer who doesn’t order again — and you find out about it days
-            late, from them. ReturnSense exists for that moment: it notices
-            first, reaches out first, and hands your team a decision instead of
-            a mystery.
+            The expensive order is not always the one that is late. It is the
+            one where support finds out after the customer is already angry.
+            ReturnSense exists for that moment: it notices first, reaches out
+            first, and hands your team a decision instead of a mystery.
           </p>
         </div>
       </section>
@@ -250,7 +247,7 @@ export function MarketingLanding() {
       <section className="lp-section" id="how">
         <span className="eyebrow lp-eyebrow">How it works</span>
         <h2 className="lp-section-title">
-          Detect, triage, contact, resolve — without you watching.
+          Detect risk, route action, measure the outcome.
         </h2>
         <div className="lp-steps">
           {steps.map((step) => (
@@ -264,15 +261,13 @@ export function MarketingLanding() {
       </section>
 
       <section className="lp-section" id="compare">
-        <span className="eyebrow lp-eyebrow">Already have a tracking app?</span>
-        <h2 className="lp-section-title">Good. Keep it.</h2>
+        <span className="eyebrow lp-eyebrow">Why it is different</span>
+        <h2 className="lp-section-title">Built for decisions, not another portal.</h2>
         <p className="lp-section-copy">
-          ReturnSense isn’t a tracking page, a branded order-status portal, or
-          a traditional return portal competing for the same job. Those tools
-          show status or process a return after the customer starts one.
-          ReturnSense works in the middle: when a delivery issue can still be
-          saved, or when support needs to decide whether a resend, exchange, or
-          refund is the right move.
+          ReturnSense is not trying to replace your tracking page or your
+          returns portal. It turns the messy post-checkout middle into a queue
+          of merchant-approved actions: contact, wait, trace, resend, refund, or
+          retention follow-up.
         </p>
       </section>
 
@@ -282,9 +277,9 @@ export function MarketingLanding() {
           Built around the decisions merchants usually find out about too late.
         </h2>
         <p className="lp-section-copy">
-          ReturnSense looks for shipment states that can still be recovered,
-          then adds order value, customer priority, service level, and carrier
-          lane history so support sees which action is worth taking.
+          ReturnSense looks for shipment states where the next action still
+          matters, then adds order value, customer priority, service level, and
+          carrier lane history so support sees which decision is worth taking.
         </p>
         <ul className="lp-signal-list">
           {recoverySignals.map((signal) => (
@@ -299,9 +294,8 @@ export function MarketingLanding() {
           The moat is learning which recovery action worked.
         </h2>
         <p className="lp-section-copy">
-          ReturnSense is not trying to win by being another branded tracking
-          page or another returns portal. The product gets stronger when it can
-          compare wait, outreach, trace, resend, replacement, and refund
+          ReturnSense gets stronger when it can compare wait, outreach, trace,
+          resend, replacement, refund, and retention
           decisions against what happened next.
         </p>
       </section>
@@ -309,7 +303,7 @@ export function MarketingLanding() {
       <section className="lp-section" id="features">
         <span className="eyebrow lp-eyebrow">What you get</span>
         <h2 className="lp-section-title">
-          The post-purchase recovery layer for your Shopify stack.
+          The post-purchase command layer for your Shopify stack.
         </h2>
         <div className="lp-features">
           {features.map((feature) => (
@@ -359,7 +353,7 @@ export function MarketingLanding() {
 
       <section className="lp-cta-band">
         <h2 className="lp-section-title">
-          Stop letting delivery problems become surprise returns.
+          Stop losing margin in the post-checkout gray zone.
         </h2>
         <a className="button lp-price-cta" href="#install">
           Start your free trial

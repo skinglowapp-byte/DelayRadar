@@ -4,13 +4,13 @@
 
 ReturnSense should not compete as "another Shopify tracking app" or "another Shopify returns app." The category language is:
 
-- Shopify post-purchase recovery app
-- Delivery exception recovery for Shopify
-- Returns prevention before the return request
+- Shopify post-purchase recovery command center
+- Post-purchase margin protection for Shopify
+- Carrier exception intelligence for Shopify
 - Carrier lane intelligence for Shopify operations
 - Refund, resend, and replacement decision engine
 
-The homepage should keep saying that ReturnSense works between tracking and returns: after a shipment goes wrong, before the customer opens a ticket or starts a return.
+The homepage should keep saying that ReturnSense works in the messy middle after checkout: when a carrier issue can still be converted into the right customer, support, refund, resend, or retention decision.
 
 ## Technical SEO
 
@@ -27,14 +27,14 @@ The homepage should keep saying that ReturnSense works between tracking and retu
 ## Keyword Clusters
 
 Primary commercial cluster:
-- Shopify post-purchase recovery app
-- Shopify delivery exception recovery
-- Shopify returns prevention app
-- reduce Shopify refunds from delivery issues
-- prevent Shopify returns before they happen
+- Shopify post-purchase recovery command center
+- Shopify margin protection app
+- Shopify carrier exception intelligence
+- Shopify refund decision engine
+- Shopify retention recovery app
 
 Operational long-tail cluster:
-- Shopify failed delivery customer email
+- Shopify failed delivery customer recovery
 - Shopify package no movement workflow
 - Shopify return to sender automation
 - Shopify delivery exception Slack alerts
@@ -42,9 +42,9 @@ Operational long-tail cluster:
 
 Comparison cluster:
 - AfterShip alternative for delivery exceptions
-- Shopify tracking app versus returns app
+- Shopify tracking app versus recovery app
 - best Shopify app to reduce WISMO tickets
-- Shopify returns app for delivery problems
+- Shopify app for post-checkout support decisions
 
 Question cluster:
 - How do I prevent returns from delayed shipments?
@@ -95,4 +95,3 @@ Original data moat:
   - "When should a merchant resend instead of refund?"
 - Sitelinks depend on stronger content architecture. Add focused hub pages before expecting them.
 - Review stars require eligible third-party review sources; do not add fake Review schema.
-

@@ -8,90 +8,82 @@ Apps → ReturnSense.
 
 ## 1. App Store listing
 
-Partner Dashboard → your app → **Distribution → Manage listing** (create an
-"App Store listing" if you don't have one yet).
+This is the combined app (DelayRadar + ReturnSense), client_id
+`4801d24015598934b6c447731cbac1a6`. Edit the listing on THIS app in the
+Partner Dashboard (the one originally named DelayRadar). The old standalone
+ReturnSense app (client_id `fda68ea2…`, returnsenseapp.com) is being retired
+and must not carry this listing.
+
+Partner Dashboard → your app → **Distribution → Manage listing**.
 
 ### App icon
-Use a ReturnSense 1200×1200 PNG from your app-submission assets
-(Shopify wants a 1200×1200 PNG, no rounded corners, no text baked in — crop/pad
-if needed).
+1200×1200 PNG, no rounded corners, no text baked in. Needs a ReturnSense icon:
+the one in `Documents for Apps/DelayRadar Shopify Items/` is still DelayRadar.
 
 ### App name (30 char max)
 ```
 ReturnSense
 ```
 
-### App card subtitle / tagline (62 char max)
+### App card subtitle (62 char max)
 ```
-Keep your tracking app. We rescue the deliveries that fail.
+Stop failed deliveries from turning into refunds and returns.
 ```
 
-### App introduction (100 char max — one sentence)
+### App introduction (100 char max)
 ```
-Recover failed deliveries: detect the exception, reach the customer first, act before they ask.
+Catch failed deliveries early, reach the customer first, and prevent the refund or return.
 ```
 
 ### App details (500 char max)
 ```
-ReturnSense is the post-purchase ops layer between tracking and returns. It watches every fulfillment for delays, failed attempts, address issues, no-movement, and lost-in-transit, ranks each by what the failure will actually cost you, contacts the customer before they contact you, and hands your team a recommended next step: save, trace, resend, exchange, refund review, or return-prevention follow-up. Fires into Klaviyo and Slack so nobody lives in another dashboard. Read-only, and it runs alongside AfterShip, ShipStation, Shippo, and your existing returns stack.
+ReturnSense is the post-purchase recovery app for Shopify. It watches every fulfillment for delays, failed attempts, address issues, stalled packages, and lost-in-transit, ranks each case by what it will cost you, and contacts the customer before they contact you. Support gets a clear next step for every case: wait, trace, resend, exchange, or refund review. Alerts flow into Klaviyo and Slack. Works alongside AfterShip, ShipStation, and your returns app.
 ```
 
-### Feature list (3–5 features; short heading + one line each)
-
-Lead with the objection. The first line a merchant reads has to answer
-"I already have a tracking app" or the rest is wasted.
+### Features (80 char max each)
 ```
-Built for the failures, not the happy path — Delays, failed attempts, address issues, uncollected pickups, no-movement, and lost-in-transit. Your tracking page shows progress; this starts where that runs out.
-
-Reaches the customer first — Automatic or one-click messages from your brand, sent while there's still time to fix it rather than after the complaint.
-
-Fires into the tools you already use — Push exceptions into Klaviyo as events for your own branded flows, or into Slack where your team already works.
-
-Triaged by what it costs you — VIP tags, high-value orders, and expedited shipping lift a shipment's rank so the expensive failure gets handled first.
-
-Tells you what to do — Resend, refund, wait, or trace, recommended for every high-risk shipment.
+Catches failed deliveries, address issues, and stalled or lost packages early
+Emails the customer from your brand before they open a ticket
+Ranks every case by order value, VIP status, and shipping speed
+Recommends wait, trace, resend, exchange, or refund for each shipment
+Sends exception events to Klaviyo flows and alerts to Slack
 ```
 
 ### Demo store URL
 ```
 https://www.delayradar.io/demo
 ```
-(This is the read-only demo dashboard route added with the landing page.)
 
 ### Screenshots (minimum 3, 1600×900 PNG)
-Capture these from the app (use the demo at /demo so there's realistic data):
-1. **Exceptions inbox** — the list with risk pills and filters.
-2. **Shipment detail panel** — timeline + recommended next action + send email.
-3. **Overview** — metrics + recently tracked shipments + onboarding checklist.
-4. (optional) **Settings** — notification rules / Slack / sender.
-5. (optional) **Reports** — carrier exception rates.
-Tip: on macOS, Shift-Cmd-4 then Space to grab a clean window; scale to 1600×900.
+Retake under the ReturnSense name (the March set shows DelayRadar). Use /demo:
+1. **Exceptions inbox**: list with risk pills and filters.
+2. **Exception detail**: timeline, recommended action, send email.
+3. **Returns prevention tab**: preventable-return risk and refund reviews.
+4. **Overview**: metrics and onboarding checklist.
+5. (optional) **Reports**: carrier lane exception rates.
 
-### Pricing
-- Plan name: **Monthly**
-- Price: **$9.99 / month**
-- Free trial: **7 days**
-- Set this under **Managed Pricing** in the Partner Dashboard. The app must not
-  call the Billing API — a Managed Pricing app that does throws "Managed Pricing
-  Apps cannot use the Billing API" and crashes install. There is no price in the
-  code; the `$9.99` strings on the landing page and /terms are display only and
-  have to be kept in sync with the dashboard by hand.
-- Plan names must match `PLAN_SHIPMENT_LIMITS` in `src/lib/plans.ts` exactly, or
-  every shop silently falls back to the default monthly shipment allowance.
+### Pricing (Managed Pricing in the Partner Dashboard, never in code)
+- Plan name: **Starter** (must match `PLAN_SHIPMENT_LIMITS` in
+  `src/lib/plans.ts` exactly; a plan named anything else silently falls back to
+  the default allowance)
+- Price: **$9.99 / month**, 7-day free trial
+- Includes 500 tracked shipments per month
+- The app must not call the Billing API. The `$9.99` strings on the landing
+  page and /terms are display only; keep them in sync by hand.
 
 ### Resources
-- Privacy policy URL: `https://www.delayradar.io/privacy`
-- FAQ / support URL: `https://www.delayradar.io/support`
-- Support email: `support@delayradar.io`  ← must actually receive mail
+- Privacy policy: `https://www.delayradar.io/privacy`
+- Support / FAQ: `https://www.delayradar.io/support`
+- Support email: `support@delayradar.io` (must actually receive mail)
 
 ### Category & search terms
-- Primary category: **Orders and shipping** → Fulfillment / Order tracking
-- Search terms: `shipping, tracking, delivery, delays, WISMO, order tracking,
-  customer notifications, exceptions, EasyPost`
+- Primary category: **Orders and shipping** → Order tracking
+- Search terms: `failed delivery`, `shipping exceptions`, `WISMO`,
+  `returns prevention`, `delivery alerts`
 
 ### Works with
 ```
-EasyPost, Slack, Postmark, SendGrid
+Klaviyo, Slack, EasyPost, Postmark, SendGrid
 ```
 
 ---

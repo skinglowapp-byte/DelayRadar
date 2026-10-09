@@ -4,11 +4,11 @@ export const loader = () =>
   new Response(
     `# ${SITE_NAME}
 
-ReturnSense is a Shopify post-purchase recovery app for merchants that want to prevent avoidable returns before they become refunds, tickets, or chargebacks.
+ReturnSense is a Shopify post-purchase recovery command center for merchants that want to protect margin after checkout by turning carrier exceptions into customer recovery, resend, refund, and retention decisions.
 
 Core positioning:
-- Delivery exception recovery for Shopify orders
-- Returns prevention before a return request starts
+- Carrier exception intelligence for Shopify orders
+- Post-purchase margin protection before a support ticket starts
 - Carrier lane intelligence for service-level and fulfillment decisions
 - Recovery outcome learning across wait, contact, trace, resend, replacement, and refund decisions
 
@@ -29,4 +29,3 @@ Support: ${SUPPORT_EMAIL}
       },
     },
   );
-

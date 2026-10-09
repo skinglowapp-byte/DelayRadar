@@ -9,9 +9,9 @@ export const links = () => [
 ];
 
 export function meta() {
-  const title = `${SITE_NAME} | Shopify Post-Purchase Recovery App`;
+  const title = `${SITE_NAME} | Shopify Post-Purchase Recovery Command Center`;
   const description =
-    "ReturnSense helps Shopify brands prevent avoidable returns by recovering delivery exceptions before they become refunds, tickets, or chargebacks.";
+    "ReturnSense helps Shopify brands protect margin after checkout by turning carrier exceptions into customer recovery, resend, refund, and retention decisions.";
 
   return [
     { title },
@@ -23,7 +23,7 @@ export function meta() {
     {
       name: "keywords",
       content:
-        "Shopify post-purchase recovery, delivery exception recovery, returns prevention, carrier lane intelligence, Shopify refund prevention",
+        "Shopify post-purchase recovery, ecommerce margin protection, carrier exception intelligence, Shopify customer recovery, refund decision engine",
     },
     { property: "og:type", content: "website" },
     { property: "og:title", content: title },
