@@ -70,16 +70,19 @@ export default function TermsOfServiceRoute() {
       <h2>5. Pricing, Billing, and Refunds</h2>
       <ul>
         <li>
-          ReturnSense is offered on a monthly subscription of{" "}
-          <strong>US$9.99 per month</strong>, billed through Shopify Billing
-          and charged to your Shopify account.
+          ReturnSense offers a free plan and paid plans (Pro{" "}
+          <strong>US$19</strong>, Business <strong>US$49</strong> and
+          Enterprise <strong>US$99</strong> per month, or the yearly
+          equivalents), billed through Shopify Billing and charged to your
+          Shopify account. Current plans and limits are shown on our App
+          Store listing.
         </li>
         <li>
-          New installs include a <strong>7-day free trial</strong>. You will not
+          Paid plans include a <strong>7-day free trial</strong>. You will not
           be charged if you uninstall before the trial ends.
         </li>
         <li>
-          Subscriptions renew automatically each 30-day billing period until
+          Subscriptions renew automatically each billing period (30 days or one year) until
           cancelled. You can cancel at any time by uninstalling the App from
           your Shopify admin; cancellation takes effect at the end of the
           current billing period.

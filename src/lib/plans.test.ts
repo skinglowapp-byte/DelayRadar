@@ -8,10 +8,22 @@ import {
 } from "./plans";
 
 describe("monthlyShipmentLimitFor", () => {
-  it("uses the allowance for a known plan", () => {
+  it("uses the allowance for each Partner Dashboard plan name", () => {
+    const limit = (planName: string) =>
+      monthlyShipmentLimitFor({ planName, monthlyShipmentLimit: null });
+    expect(limit("Free Plan")).toBe(50);
+    expect(limit("Pro")).toBe(500);
+    expect(limit("Business")).toBe(2_000);
+    expect(limit("Enterprise")).toBe(PLAN_SHIPMENT_LIMITS.enterprise);
+  });
+
+  it("matches plan names case-insensitively and tolerates the dashboard typo", () => {
     expect(
-      monthlyShipmentLimitFor({ planName: "Growth", monthlyShipmentLimit: null }),
-    ).toBe(PLAN_SHIPMENT_LIMITS.Growth);
+      monthlyShipmentLimitFor({ planName: " business ", monthlyShipmentLimit: null }),
+    ).toBe(2_000);
+    expect(
+      monthlyShipmentLimitFor({ planName: "Enterprice", monthlyShipmentLimit: null }),
+    ).toBe(PLAN_SHIPMENT_LIMITS.enterprise);
   });
 
   it("falls back to the default for an unrecognized plan", () => {
@@ -31,13 +43,13 @@ describe("monthlyShipmentLimitFor", () => {
 
   it("lets a per-shop override beat the plan allowance", () => {
     expect(
-      monthlyShipmentLimitFor({ planName: "Starter", monthlyShipmentLimit: 25_000 }),
+      monthlyShipmentLimitFor({ planName: "Pro", monthlyShipmentLimit: 25_000 }),
     ).toBe(25_000);
   });
 
   it("honours an override of zero rather than treating it as unset", () => {
     expect(
-      monthlyShipmentLimitFor({ planName: "Scale", monthlyShipmentLimit: 0 }),
+      monthlyShipmentLimitFor({ planName: "Business", monthlyShipmentLimit: 0 }),
     ).toBe(0);
   });
 });

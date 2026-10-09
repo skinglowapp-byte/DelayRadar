@@ -6,15 +6,26 @@
 // The allowance is enforced where the tracker is registered — see
 // src/worker/process-job.ts.
 //
-// The keys MUST match the plan names configured in the Shopify Partner
-// Dashboard under Managed Pricing, exactly. Shopify owns the prices; this file
-// only maps a plan to what it is allowed to consume. A shop on a plan that
-// isn't listed here (or on no plan at all) falls back to the default.
+// Keys are the plan names configured in the Shopify Partner Dashboard under
+// Managed Pricing (Free Plan / Pro $19 / Business $49 / Enterprise $99), which
+// is where Shopify owns the prices. Names are matched case-insensitively, and
+// the dashboard's misspelt "Enterprice" display name and "enterpirce" handle
+// are mapped too, so a typo fix there can't silently drop a shop to the default.
+// A shop on a plan that isn't listed here (or on no plan at all) falls back to
+// the default.
+
+// "Unlimited" on the listing; a finite ceiling still guards against a runaway
+// tracking bill from a single misbehaving install.
+export const ENTERPRISE_SHIPMENT_LIMIT = 1_000_000;
 
 export const PLAN_SHIPMENT_LIMITS: Record<string, number> = {
-  Starter: 500,
-  Growth: 2_000,
-  Scale: 6_000,
+  "free plan": 50,
+  free: 50,
+  pro: 500,
+  business: 2_000,
+  enterprise: ENTERPRISE_SHIPMENT_LIMIT,
+  enterprice: ENTERPRISE_SHIPMENT_LIMIT,
+  enterpirce: ENTERPRISE_SHIPMENT_LIMIT,
 };
 
 // Deliberately conservative: an unrecognized plan name means the Partner
@@ -34,8 +45,9 @@ export function monthlyShipmentLimitFor(shop: ShopPlanFields): number {
     return shop.monthlyShipmentLimit;
   }
 
-  if (shop.planName && shop.planName in PLAN_SHIPMENT_LIMITS) {
-    return PLAN_SHIPMENT_LIMITS[shop.planName];
+  const planKey = shop.planName?.trim().toLowerCase();
+  if (planKey && planKey in PLAN_SHIPMENT_LIMITS) {
+    return PLAN_SHIPMENT_LIMITS[planKey];
   }
 
   return DEFAULT_MONTHLY_SHIPMENT_LIMIT;

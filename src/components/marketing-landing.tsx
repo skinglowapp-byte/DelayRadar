@@ -58,7 +58,7 @@ const faqs = [
   },
   {
     q: "How much does it cost?",
-    a: "$9.99/month with a 7-day free trial, billed through Shopify. Cancel anytime by uninstalling.",
+    a: "There's a free plan for up to 50 tracked shipments a month. Paid plans are Pro ($19/month, 500 shipments), Business ($49/month, 2,000) and Enterprise ($99/month, unlimited), each with a 7-day free trial and a yearly option, billed through Shopify. Cancel anytime by uninstalling.",
   },
   {
     q: "Which carriers are supported?",
@@ -67,6 +67,42 @@ const faqs = [
   {
     q: "Do my customers get emails from my brand?",
     a: "Yes. Replies go to your address, and once your sending domain is verified, emails go out as your brand. Or skip our sender entirely and run the whole thing through your Klaviyo.",
+  },
+];
+
+// Mirrors Managed Pricing in the Partner Dashboard, which is what Shopify bills.
+const pricingPlans = [
+  {
+    name: "Free",
+    price: "$0",
+    period: "/ month",
+    note: "No card needed",
+    features: ["Up to 50 tracked shipments a month", "Exceptions inbox", "Email notifications", "1 carrier"],
+    cta: "Install free",
+  },
+  {
+    name: "Pro",
+    price: "$19",
+    period: "/ month",
+    note: "7-day free trial · or $190/year",
+    features: ["Up to 500 tracked shipments a month", "All exception types and priority rules", "Slack integration", "Daily digest reports", "All carriers"],
+    cta: "Start free trial",
+  },
+  {
+    name: "Business",
+    price: "$49",
+    period: "/ month",
+    note: "7-day free trial · or $490/year",
+    features: ["Everything in Pro", "Up to 2,000 tracked shipments a month", "Custom notification templates", "Workflow automation", "Carrier performance reports"],
+    cta: "Start free trial",
+  },
+  {
+    name: "Enterprise",
+    price: "$99",
+    period: "/ month",
+    note: "7-day free trial · or $990/year",
+    features: ["Everything in Business", "Unlimited shipments", "Priority support"],
+    cta: "Start free trial",
   },
 ];
 
@@ -89,9 +125,11 @@ const schema = {
       description:
         "A Shopify post-purchase recovery command center that detects carrier exceptions, prioritizes orders by margin risk, and routes each case toward the right recovery decision.",
       offers: {
-        "@type": "Offer",
-        price: "9.99",
+        "@type": "AggregateOffer",
+        lowPrice: "0",
+        highPrice: "99",
         priceCurrency: "USD",
+        offerCount: 4,
         availability: "https://schema.org/InStock",
       },
       audience: {
@@ -220,7 +258,7 @@ export function MarketingLanding() {
             </button>
           </form>
           <p className="lp-hero-note">
-            <strong>$9.99/mo</strong> · 7-day free trial ·{" "}
+            <strong>Free plan</strong> · paid from $19/mo · 7-day free trial ·{" "}
             <a href="/demo">see a live demo →</a>
           </p>
         </div>
@@ -317,24 +355,33 @@ export function MarketingLanding() {
 
       <section className="lp-section lp-pricing-section" id="pricing">
         <span className="eyebrow lp-eyebrow">Pricing</span>
-        <h2 className="lp-section-title">One simple plan.</h2>
-        <div className="lp-pricing">
-          <div className="lp-price-head">
-            <span className="lp-price-amount">$9.99</span>
-            <span className="lp-price-period">/ month</span>
-          </div>
-          <p className="lp-price-trial">7-day free trial · cancel anytime</p>
-          <ul className="lp-price-list">
-            <li>Up to 500 monitored shipments a month</li>
-            <li>Proactive customer email + templates</li>
-            <li>Klaviyo events and Slack alerts</li>
-            <li>Priority rules and next-best-action</li>
-            <li>Carrier &amp; lane exception reporting</li>
-            <li>Returns-prevention workflow</li>
-          </ul>
-          <a className="button lp-price-cta" href="#install">
-            Start free trial
-          </a>
+        <h2 className="lp-section-title">Start free. Upgrade as you ship more.</h2>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+            gap: "16px",
+            marginTop: "24px",
+          }}
+        >
+          {pricingPlans.map((plan) => (
+            <div className="lp-pricing" key={plan.name} style={{ margin: 0, maxWidth: "none" }}>
+              <h3 className="lp-feature-title">{plan.name}</h3>
+              <div className="lp-price-head">
+                <span className="lp-price-amount">{plan.price}</span>
+                <span className="lp-price-period">{plan.period}</span>
+              </div>
+              <p className="lp-price-trial">{plan.note}</p>
+              <ul className="lp-price-list">
+                {plan.features.map((feature) => (
+                  <li key={feature}>{feature}</li>
+                ))}
+              </ul>
+              <a className="button lp-price-cta" href="#install">
+                {plan.cta}
+              </a>
+            </div>
+          ))}
         </div>
       </section>
 

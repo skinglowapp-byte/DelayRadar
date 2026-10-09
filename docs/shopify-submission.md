@@ -64,13 +64,21 @@ Retake under the ReturnSense name (the March set shows DelayRadar). Use /demo:
 5. (optional) **Reports**: carrier lane exception rates.
 
 ### Pricing (Managed Pricing in the Partner Dashboard, never in code)
-- Plan name: **Starter** (must match `PLAN_SHIPMENT_LIMITS` in
-  `src/lib/plans.ts` exactly; a plan named anything else silently falls back to
-  the default allowance)
-- Price: **$9.99 / month**, 7-day free trial
-- Includes 500 tracked shipments per month
-- The app must not call the Billing API. The `$9.99` strings on the landing
-  page and /terms are display only; keep them in sync by hand.
+Plans as configured in the Partner Dashboard (Shopify bills these):
+
+| Plan (display name) | Price | Tracked shipments / month |
+|---|---|---|
+| Free Plan | $0 | 50 |
+| Pro | $19/mo or $190/yr, 7-day trial | 500 |
+| Business | $49/mo or $490/yr, 7-day trial | 2,000 |
+| Enterprise | $99/mo or $990/yr, 7-day trial | unlimited (1,000,000 ceiling) |
+
+- `PLAN_SHIPMENT_LIMITS` in `src/lib/plans.ts` matches these names
+  case-insensitively (including the old "Enterprice"/"enterpirce" typo).
+  Rename a plan in the dashboard and you must add the new name there too, or
+  the shop falls back to the 500 default.
+- The app must not call the Billing API. Prices on the landing page, install
+  panel and /terms are display only; keep them in sync by hand.
 
 ### Resources
 - Privacy policy: `https://www.returnsenseapp.com/privacy`
