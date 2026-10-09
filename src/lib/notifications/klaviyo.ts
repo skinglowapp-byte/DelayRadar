@@ -12,7 +12,7 @@ const KLAVIYO_EVENTS_ENDPOINT = "https://a.klaviyo.com/api/events/";
 // and re-test; leaving it unset means being opted into their latest.
 const KLAVIYO_REVISION = "2024-10-15";
 
-export const KLAVIYO_METRIC_NAME = "DelayRadar Delivery Exception";
+export const KLAVIYO_METRIC_NAME = "ReturnSense Delivery Exception";
 
 export type KlaviyoEventInput = {
   apiKey: string;
