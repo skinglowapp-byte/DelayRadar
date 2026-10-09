@@ -119,7 +119,7 @@ export default function PrivacyPolicyRoute() {
       <h2>Contact</h2>
       <p>
         For privacy questions or data requests, contact us at{" "}
-        <a href="mailto:support@delayradar.io">support@delayradar.io</a>.
+        <a href="mailto:support@returnsenseapp.com">support@returnsenseapp.com</a>.
       </p>
 
       <h2>Related</h2>

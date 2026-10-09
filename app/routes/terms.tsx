@@ -143,7 +143,7 @@ export default function TermsOfServiceRoute() {
       <p>
         ReturnSense is operated by Saleh &amp; Associates LLC. For questions about
         these Terms, contact us at{" "}
-        <a href="mailto:support@delayradar.io">support@delayradar.io</a>.
+        <a href="mailto:support@returnsenseapp.com">support@returnsenseapp.com</a>.
       </p>
     </main>
   );

@@ -50,7 +50,7 @@ jobs:
             -o response.json \
             -w '%{http_code}' \
             -H "Authorization: Bearer ${CRON_SECRET}" \
-            https://www.delayradar.io/api/cron/worker)
+            https://www.returnsenseapp.com/api/cron/worker)
 
           echo "HTTP ${http_status}"
           cat response.json

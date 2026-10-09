@@ -18,10 +18,10 @@ The homepage should keep saying that ReturnSense works in the messy middle after
 - Support/legal/demo pages: reachable from navigation/footer, but `noindex,follow`.
 - Block app surfaces: `robots.txt` disallows `/app`, `/api`, and `/auth`.
 - Sitemap: includes only indexable public URLs.
-- Canonical: homepage canonical points to `https://www.delayradar.io/` until a ReturnSense domain is live.
+- Canonical: homepage canonical points to `https://www.returnsenseapp.com/`.
 - Rendering: the public landing route is server-rendered by React Router, so primary content is available without client-only rendering.
 - Performance: avoid large hero media until optimized assets exist. If adding screenshots, use compressed WebP/AVIF, fixed dimensions, descriptive alt text, and lazy loading below the first viewport.
-- Redirects: when `returnsense.*` goes live, use one-hop 301 redirects from the old DelayRadar public URLs to matching ReturnSense URLs. Do not chain domain redirect plus path redirect.
+- Redirects: `delayradar.io` and `www.delayradar.io` 308-redirect (path preserved) to `https://www.returnsenseapp.com` at the Vercel domain level.
 - Facets/pagination: none today. If content hubs add tags or filters, keep filtered combinations out of the sitemap and canonicalize to the main hub.
 
 ## Keyword Clusters

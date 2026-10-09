@@ -51,7 +51,7 @@ Emails customers first; sends events to Klaviyo flows and alerts to Slack
 
 ### Demo store URL
 ```
-https://www.delayradar.io/demo
+https://www.returnsenseapp.com/demo
 ```
 
 ### Screenshots (minimum 3, 1600×900 PNG)
@@ -72,9 +72,9 @@ Retake under the ReturnSense name (the March set shows DelayRadar). Use /demo:
   page and /terms are display only; keep them in sync by hand.
 
 ### Resources
-- Privacy policy: `https://www.delayradar.io/privacy`
-- Support / FAQ: `https://www.delayradar.io/support`
-- Support email: `support@delayradar.io` (must actually receive mail)
+- Privacy policy: `https://www.returnsenseapp.com/privacy`
+- Support / FAQ: `https://www.returnsenseapp.com/support`
+- Support email: `support@returnsenseapp.com` (must actually receive mail)
 
 ### Category & search terms
 - Primary category: **Orders and shipping** → Order tracking
@@ -127,7 +127,7 @@ data for advertising, profiling, or resale.
   shipment records, notification logs, and stored payloads).
 - **Limit staff access:** Yes — production data access is restricted to the app
   operator.
-- **Published privacy policy:** Yes — https://www.delayradar.io/privacy
+- **Published privacy policy:** Yes — https://www.returnsenseapp.com/privacy
 
 ### After approval
 Nothing to redeploy — the `fulfillments/create` / `fulfillments/update`
