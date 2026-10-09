@@ -27,26 +27,26 @@ ReturnSense
 
 ### App card subtitle (62 char max)
 ```
-Stop failed deliveries from turning into refunds and returns.
+Turn failed deliveries into saved orders, not refunds.
 ```
 
 ### App introduction (100 char max)
 ```
-Catch failed deliveries early, reach the customer first, and prevent the refund or return.
+The recovery layer after tracking: know when to wait, resend, or refund before the customer asks.
 ```
 
 ### App details (500 char max)
 ```
-ReturnSense is the post-purchase recovery app for Shopify. It watches every fulfillment for delays, failed attempts, address issues, stalled packages, and lost-in-transit, ranks each case by what it will cost you, and contacts the customer before they contact you. Support gets a clear next step for every case: wait, trace, resend, exchange, or refund review. Alerts flow into Klaviyo and Slack. Works alongside AfterShip, ShipStation, and your returns app.
+Tracking apps tell you a package is late. ReturnSense tells you what to do about it. It catches delays, failed attempts, address issues, and stalled or lost packages, shows the order value at risk on each, and recommends the next move: wait, trace, resend, exchange, or refund review. Carrier lane reports show which carrier and service level keep failing. Customers hear from your brand first, and alerts flow into Klaviyo and Slack. Runs alongside AfterShip and your returns app.
 ```
 
 ### Features (80 char max each)
 ```
-Catches failed deliveries, address issues, and stalled or lost packages early
-Emails the customer from your brand before they open a ticket
-Ranks every case by order value, VIP status, and shipping speed
-Recommends wait, trace, resend, exchange, or refund for each shipment
-Sends exception events to Klaviyo flows and alerts to Slack
+Recommends wait, trace, resend, exchange, or refund for every problem order
+Shows the order value at risk across all open delivery exceptions
+Carrier lane reports flag which carrier and service level keep failing
+Returns prevention view surfaces refund and resend cases before they're filed
+Emails customers first; sends events to Klaviyo flows and alerts to Slack
 ```
 
 ### Demo store URL
