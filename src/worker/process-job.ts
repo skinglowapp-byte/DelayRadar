@@ -31,6 +31,7 @@ import {
 import { backfillRecentShipments } from "@/src/lib/processors/shopify-fulfillment";
 import { prisma } from "@/src/lib/prisma";
 import { withRevocationHandling } from "@/src/lib/shopify/revocation";
+import { planNameForGating } from "@/src/lib/shopify/subscription";
 import { createEasyPostTracker } from "@/src/lib/tracking/easypost";
 import {
   checkpointDate,
@@ -83,6 +84,7 @@ async function processCreateTrackerJob(jobId: string, shipmentId: string) {
           id: true,
           domain: true,
           planName: true,
+          planSyncedAt: true,
           monthlyShipmentLimit: true,
         },
       },
@@ -93,9 +95,11 @@ async function processCreateTrackerJob(jobId: string, shipmentId: string) {
     return;
   }
 
+  const planName = await planNameForGating(shipment.shop);
+
   // Check the shop's monthly allowance before registering the tracker, since
   // registering it is what incurs the per-shipment tracking cost.
-  const limit = monthlyShipmentLimitFor(shipment.shop);
+  const limit = monthlyShipmentLimitFor({ ...shipment.shop, planName });
   const trackedThisMonth = await prisma.shipment.count({
     where: {
       shopId: shipment.shopId,
@@ -122,7 +126,7 @@ async function processCreateTrackerJob(jobId: string, shipmentId: string) {
   // Free tracks a single carrier: the first one the shop ever had tracked.
   // A shipment whose carrier isn't known yet is let through (EasyPost
   // detects it), so a Free shop's very first shipment always gets tracked.
-  if (!planFeaturesFor(shipment.shop.planName).multiCarrier) {
+  if (!planFeaturesFor(planName).multiCarrier) {
     const shipmentCarrier = carrierKey(shipment.trackingCarrier);
     const firstTracked = await prisma.shipment.findFirst({
       where: {
@@ -191,7 +195,7 @@ async function processNotificationJob(shipmentId: string) {
 
   // Plan checks happen here, at send time, so a downgrade takes effect on the
   // next exception without touching anything the merchant configured.
-  const features = planFeaturesFor(shipment.shop.planName);
+  const features = planFeaturesFor(await planNameForGating(shipment.shop));
 
   if (!isExceptionTypeIncluded(features, shipment.latestExceptionType)) {
     return;

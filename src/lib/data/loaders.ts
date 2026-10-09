@@ -1078,7 +1078,7 @@ function buildOnboardingChecklist(shop: {
 }
 
 // How old a cached plan can be before opening the dashboard refreshes it.
-const PLAN_REFRESH_ON_OPEN_MS = 5 * 60_000;
+const PLAN_REFRESH_ON_OPEN_MS = 60_000;
 
 export async function getAppBootstrap(
   shopDomain: string | null,
@@ -1145,6 +1145,9 @@ export async function getAppBootstrap(
   const staleThresholdAt = new Date(
     Date.now() - noMovementThresholdHours * 3600000,
   );
+  const staleCutoffAt = features.allExceptionTypes
+    ? staleThresholdAt
+    : new Date(Date.now() - lostInTransitThresholdHours * 3600000);
 
   const [
     trackedShipments,
@@ -1217,51 +1220,51 @@ export async function getAppBootstrap(
         },
       },
     }),
-    // "No tracking movement" is a Pro+ exception type.
-    features.allExceptionTypes
-      ? prisma.shipment.findMany({
-        where: {
-          shopId: shop.id,
-          trackingProviderId: { not: null },
-          latestExceptionType: null,
-          latestStatus: {
-            in: [ShipmentStatus.PENDING, ShipmentStatus.IN_TRANSIT],
-          },
-          OR: [
-            {
-              latestCheckpointAt: {
-                lte: staleThresholdAt,
-              },
-            },
-            {
-              latestCheckpointAt: null,
-              updatedAt: {
-                lte: staleThresholdAt,
-              },
-            },
-          ],
+    // "No tracking movement" is a Pro+ exception type, but a Free shop still
+    // sees stalled parcels once they pass the lost-in-transit window, since
+    // "Lost in transit" is on every plan.
+    prisma.shipment.findMany({
+      where: {
+        shopId: shop.id,
+        trackingProviderId: { not: null },
+        latestExceptionType: null,
+        latestStatus: {
+          in: [ShipmentStatus.PENDING, ShipmentStatus.IN_TRANSIT],
         },
-        orderBy: [{ updatedAt: "asc" }],
-        take: 12,
-        include: {
-          events: {
-            orderBy: { occurredAt: "desc" },
-            take: 5,
-          },
-          notifications: {
-            orderBy: [{ createdAt: "desc" }],
-            take: 5,
-            include: {
-              template: true,
+        OR: [
+          {
+            latestCheckpointAt: {
+              lte: staleCutoffAt,
             },
           },
-          notes: {
-            orderBy: { createdAt: "desc" },
-            take: 10,
+          {
+            latestCheckpointAt: null,
+            updatedAt: {
+              lte: staleCutoffAt,
+            },
+          },
+        ],
+      },
+      orderBy: [{ updatedAt: "asc" }],
+      take: 12,
+      include: {
+        events: {
+          orderBy: { occurredAt: "desc" },
+          take: 5,
+        },
+        notifications: {
+          orderBy: [{ createdAt: "desc" }],
+          take: 5,
+          include: {
+            template: true,
           },
         },
-      })
-      : Promise.resolve([]),
+        notes: {
+          orderBy: { createdAt: "desc" },
+          take: 10,
+        },
+      },
+    }),
     prisma.shipment.findMany({
       where: {
         shopId: shop.id,

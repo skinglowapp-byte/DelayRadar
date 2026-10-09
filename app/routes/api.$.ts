@@ -24,6 +24,7 @@ import db from "../db.server";
 import { authenticate } from "../shopify.server";
 
 import { prisma } from "@/src/lib/prisma";
+import { syncShopPlan } from "@/src/lib/shopify/subscription";
 import { ingestShopifyFulfillmentWebhook } from "@/src/lib/processors/shopify-fulfillment";
 import { rateLimit, rateLimitKeyFromRequest } from "@/src/lib/rate-limit";
 
@@ -116,6 +117,22 @@ async function dispatchShopifyTopic(
           uninstalledAt: new Date(),
         },
       });
+    }
+    return;
+  }
+
+  // Fires when a merchant picks, changes or cancels a plan on Shopify's plan
+  // page. Re-reading the plan here means an upgrade unlocks immediately,
+  // instead of waiting for the next dashboard open or worker run.
+  if (normalizedTopic === "app_subscriptions/update") {
+    if (prisma) {
+      const record = await prisma.shop.findUnique({
+        where: { domain: shop },
+        select: { id: true },
+      });
+      if (record) {
+        await syncShopPlan(record.id);
+      }
     }
     return;
   }

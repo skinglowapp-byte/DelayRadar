@@ -91,19 +91,26 @@ export const FREE_EXCEPTION_TYPES = [
 // Matched case-insensitively against the subscription name Shopify returns.
 // Both display names and plan handles are listed, including the dashboard's
 // old "Enterprice"/"enterpirce" typo, so a rename there can't silently drop a
-// paying shop to Free. "shopify-test" is the private $0 plan Shopify's app
-// reviewers install with; they need to see every feature.
+// paying shop to Free. "shopify-test" ("Shopify Test", shown as "Test plan")
+// is the private $0 plan Shopify's app reviewers install with; they need to
+// see every feature.
+// Keys are normalised by planNameKey (lower case, letters and digits only), so
+// "Free Plan", "free-plan" and "free_plan" are one entry.
 const TIER_BY_PLAN_NAME: Record<string, PlanTier> = {
-  "free plan": "free",
-  "free-plan": "free",
+  freeplan: "free",
   free: "free",
   pro: "pro",
   business: "business",
   enterprise: "enterprise",
   enterprice: "enterprise",
   enterpirce: "enterprise",
-  "shopify-test": "enterprise",
+  shopifytest: "enterprise",
+  testplan: "enterprise",
 };
+
+function planNameKey(planName: string | null | undefined): string {
+  return (planName ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
 
 // A shop with no active subscription is on Free: the $0 plan may not surface
 // as a subscription at all. An unrecognised, non-empty name means the Partner
@@ -112,7 +119,7 @@ const TIER_BY_PLAN_NAME: Record<string, PlanTier> = {
 const UNRECOGNISED_PLAN_TIER: PlanTier = "pro";
 
 export function planTierFor(planName: string | null | undefined): PlanTier {
-  const key = planName?.trim().toLowerCase();
+  const key = planNameKey(planName);
 
   if (!key) {
     return "free";
@@ -162,10 +169,32 @@ export function effectivePrioritySettings(
   };
 }
 
-// Normalises a carrier label so "USPS", "usps " and "Usps" lock to one carrier.
+// Carrier families for the single-carrier limit. Shopify's tracking-company
+// label ("DHL Express") and EasyPost's carrier code ("DHLExpress") must lock
+// to the same carrier, and a merchant's DHL eCommerce and DHL Express
+// shipments count as one carrier, DHL.
+const CARRIER_FAMILIES = [
+  "usps",
+  "ups",
+  "fedex",
+  "dhl",
+  "amazon",
+  "canadapost",
+  "royalmail",
+  "australiapost",
+  "ontrac",
+  "lasership",
+  "purolator",
+];
+
 export function carrierKey(carrier: string | null | undefined): string | null {
-  const key = carrier?.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
-  return key || null;
+  const key = (carrier ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+  if (!key) {
+    return null;
+  }
+
+  return CARRIER_FAMILIES.find((family) => key.startsWith(family)) ?? key;
 }
 
 export const PLAN_SHIPMENT_LIMITS: Record<PlanTier, number> = {

@@ -55,11 +55,17 @@ describe("monthlyShipmentLimitFor", () => {
 describe("planTierFor / planFeaturesFor", () => {
   it("maps the reviewers' private shopify-test plan to Enterprise", () => {
     expect(planTierFor("shopify-test")).toBe("enterprise");
+    expect(planTierFor("Test plan")).toBe("enterprise");
   });
 
   it("maps plan handles as well as display names", () => {
     expect(planTierFor("free-plan")).toBe("free");
     expect(planTierFor("business")).toBe("business");
+  });
+
+  it("ignores spaces, hyphens and underscores in plan names", () => {
+    expect(planTierFor("Shopify Test")).toBe("enterprise");
+    expect(planTierFor("free_plan")).toBe("free");
   });
 
   it("matches the listing: each tier adds features, never removes them", () => {
@@ -116,8 +122,23 @@ describe("effectivePrioritySettings", () => {
 describe("carrierKey", () => {
   it("normalises carrier labels so one carrier locks once", () => {
     expect(carrierKey(" USPS ")).toBe(carrierKey("usps"));
-    expect(carrierKey("DHL eCommerce")).toBe("dhlecommerce");
     expect(carrierKey("  ")).toBeNull();
+  });
+
+  it("treats Shopify and EasyPost spellings of a carrier as one family", () => {
+    expect(carrierKey("DHL Express")).toBe(carrierKey("DHLExpress"));
+    expect(carrierKey("DHL eCommerce")).toBe("dhl");
+    expect(carrierKey("Canada Post")).toBe(carrierKey("CanadaPost"));
+    expect(carrierKey("FedEx SmartPost")).toBe("fedex");
+  });
+
+  it("keeps UPS and USPS apart", () => {
+    expect(carrierKey("UPS Mail Innovations")).toBe("ups");
+    expect(carrierKey("USPS")).toBe("usps");
+  });
+
+  it("falls back to the normalised label for carriers outside the list", () => {
+    expect(carrierKey("Local Courier Co.")).toBe("localcourierco");
   });
 });
 
