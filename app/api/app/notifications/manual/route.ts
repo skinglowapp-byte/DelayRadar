@@ -6,7 +6,9 @@ import { NextResponse } from "@/src/lib/next-response";
 import { z } from "zod";
 
 import { sendEmail, shopEmailSender } from "@/src/lib/notifications/email";
+import { defaultTemplateFor } from "@/src/lib/data/defaults";
 import { renderShipmentTemplate } from "@/src/lib/notifications/shipment-template";
+import { planFeaturesFor } from "@/src/lib/plans";
 import { prisma } from "@/src/lib/prisma";
 import { requireShopDomain, routeErrorResponse } from "@/src/lib/shopify/route-helpers";
 import { toHtmlBody } from "@/src/lib/utils";
@@ -79,7 +81,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const rendered = renderShipmentTemplate(shipment, template);
+    // Below Business the built-in copy is sent, even if the template was
+    // edited on a paid plan before a downgrade.
+    const builtIn = planFeaturesFor(shop.planName).customTemplates
+      ? null
+      : defaultTemplateFor(NotificationChannel.EMAIL, template.triggerType);
+    const rendered = renderShipmentTemplate(
+      shipment,
+      builtIn ? { ...template, subject: builtIn.subject, body: builtIn.body } : template,
+    );
 
     try {
       const delivery = await sendEmail({

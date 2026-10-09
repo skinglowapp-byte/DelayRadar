@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { isActionNeededTriggerType } from "@/src/lib/notifications/message-mode";
 import { prisma } from "@/src/lib/prisma";
+import { planGateResponse } from "@/src/lib/shopify/plan-gate";
 import { requireShopDomain, routeErrorResponse } from "@/src/lib/shopify/route-helpers";
 
 const templateSchema = z.object({
@@ -49,6 +50,11 @@ export async function POST(request: Request) {
         { error: "Connected shop not found." },
         { status: 404 },
       );
+    }
+
+    const gate = planGateResponse(shop, "customTemplates");
+    if (gate) {
+      return gate;
     }
 
     const template = await prisma.$transaction(async (tx) => {

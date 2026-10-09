@@ -7,8 +7,10 @@ import {
   slackRuleDescription,
   toneClass,
 } from "./helpers";
+import { UpgradeBanner } from "./upgrade-banner";
 
 export function SettingsTab({
+  plan,
   health,
   settings,
   isSaving,
@@ -57,6 +59,7 @@ export function SettingsTab({
   onDisconnectKlaviyo,
   onRetryFailedJobs,
 }: {
+  plan: AppBootstrap["plan"] | null;
   health: AppBootstrap["health"] | null;
   settings: AppBootstrap["settings"] | null;
   isSaving: boolean;
@@ -229,7 +232,8 @@ export function SettingsTab({
           <label className="toggle-card" aria-label="Email me the daily digest">
             <input
               type="checkbox"
-              checked={digestEmailEnabled}
+              disabled={plan ? !plan.dailyDigest : false}
+              checked={digestEmailEnabled && (plan ? plan.dailyDigest : true)}
               onChange={(event) =>
                 onDigestEmailEnabledChange(event.target.checked)
               }
@@ -278,6 +282,14 @@ export function SettingsTab({
             </select>
           </label>
         </div>
+        {plan && !plan.dailyDigest ? (
+          <UpgradeBanner
+            plan={plan}
+            requiredPlan="Pro"
+            title="Daily digest reports"
+            body="Get one summary of open exceptions by email or Slack each morning."
+          />
+        ) : null}
         <div className="split-inline">
           <span className="microcopy">
             Custom From requires domain verification with our email provider —
@@ -400,6 +412,7 @@ export function SettingsTab({
               type="number"
               min="10"
               step="1"
+              disabled={plan ? !plan.priorityRules : false}
               value={priorityOrderValueThreshold}
               onChange={(event) =>
                 onPriorityOrderValueThresholdChange(event.target.value)
@@ -420,6 +433,7 @@ export function SettingsTab({
             <span className="field-label">VIP tag match</span>
             <input
               className="input"
+              disabled={plan ? !plan.priorityRules : false}
               value={vipTagPattern}
               onChange={(event) =>
                 onVipTagPatternChange(event.target.value)
@@ -454,6 +468,14 @@ export function SettingsTab({
             </span>
           </label>
         </div>
+        {plan && !plan.priorityRules ? (
+          <UpgradeBanner
+            plan={plan}
+            requiredPlan="Pro"
+            title="Custom priority rules"
+            body="Set your own high-value threshold and VIP tags. Your plan uses the defaults shown."
+          />
+        ) : null}
         <div className="split-inline">
           <span className="microcopy">
             ReturnSense boosts inbox ranking, Slack alerts, and
@@ -560,120 +582,148 @@ export function SettingsTab({
             Tracking provider: {settings?.trackingProvider}
           </span>
         </div>
-        <div className="form-grid">
-          <label className="field wide">
-            <span className="field-label">Slack incoming webhook</span>
-            <input
-              className="input"
-              placeholder="https://hooks.slack.com/services/..."
-              value={slackWebhookUrl}
-              onChange={(event) => onSlackWebhookUrlChange(event.target.value)}
+        {plan && !plan.slack ? (
+          <>
+            <UpgradeBanner
+              plan={plan}
+              requiredPlan="Pro"
+              title="Slack alerts"
+              body="Send high-risk exceptions and the daily digest to your team's Slack channel."
             />
-          </label>
-          <label className="field">
-            <span className="field-label">Daily digest hour</span>
-            <select
-              className="select"
-              value={digestHour}
-              onChange={(event) => onDigestHourChange(event.target.value)}
-            >
-              {Array.from({ length: 24 }, (_, hour) => (
-                <option key={hour} value={String(hour)}>
-                  {hour === 0
-                    ? "12:00 AM"
-                    : hour < 12
-                      ? `${hour}:00 AM`
-                      : hour === 12
-                        ? "12:00 PM"
-                        : `${hour - 12}:00 PM`}
-                </option>
-              ))}
-            </select>
-            <span className="helper-text">
-              Digests are queued for this hour but only sent out
-              during our twice-daily processing windows, so
-              delivery can lag by up to several hours.
-            </span>
-          </label>
-          <label className="field">
-            <span className="field-label">Slack scope</span>
-            <select
-              className="select"
-              value={notifyHighRiskOnly ? "high-risk" : "all"}
-              onChange={(event) =>
-                onNotifyHighRiskOnlyChange(event.target.value === "high-risk")
-              }
-            >
-              <option value="high-risk">High-risk exceptions only</option>
-              <option value="all">All exception notifications</option>
-            </select>
-          </label>
-        </div>
-        <div className="rule-grid">
-          {(settings?.slackRules ?? []).map((rule) => (
-            <label className="toggle-card" key={rule.triggerType} aria-label={rule.label}>
-              <input
-                type="checkbox"
-                checked={
-                  slackRuleState[rule.triggerType] ?? rule.active
-                }
-                onChange={(event) =>
-                  onSlackRuleToggle(rule.triggerType, event.target.checked)
-                }
-              />
-              <div className="stack tight">
-                <strong>{rule.label}</strong>
-                <span className="microcopy">
-                  {slackRuleDescription(rule.triggerType)}
-                </span>
-              </div>
-            </label>
-          ))}
-        </div>
-        <div className="split-inline">
-          <span className="microcopy">
-            {settings?.slackConfigured
-              ? "Slack destination is already configured for this store."
-              : "No Slack destination configured yet."}{" "}
-            Digest jobs are scheduled against the store&apos;s configured digest hour, and the worker still delivers them.
-          </span>
-          <div className="stack-form">
-            <button
-              className="button-secondary"
-              type="button"
-              onClick={onSendSlackTest}
-              disabled={isSaving}
-            >
-              Send Slack test
-            </button>
-            <button
-              className="button-secondary"
-              type="button"
-              onClick={onQueueDailyDigest}
-              disabled={isSaving}
-            >
-              Queue digest now
-            </button>
-            <button
-              className="button"
-              type="button"
-              onClick={onSaveSlackSettings}
-              disabled={isSaving}
-            >
-              Save Slack settings
-            </button>
             {settings?.slackConfigured ? (
-              <button
-                className="button-secondary"
-                type="button"
-                onClick={onClearSlackWebhook}
-                disabled={isSaving}
-              >
-                Remove webhook
-              </button>
+              <div className="split-inline">
+                <span className="microcopy">
+                  A Slack webhook from a previous plan is saved but paused.
+                </span>
+                <button
+                  className="button-secondary"
+                  type="button"
+                  onClick={onClearSlackWebhook}
+                  disabled={isSaving}
+                >
+                  Remove webhook
+                </button>
+              </div>
             ) : null}
-          </div>
-        </div>
+          </>
+        ) : (
+          <>
+            <div className="form-grid">
+              <label className="field wide">
+                <span className="field-label">Slack incoming webhook</span>
+                <input
+                  className="input"
+                  placeholder="https://hooks.slack.com/services/..."
+                  value={slackWebhookUrl}
+                  onChange={(event) => onSlackWebhookUrlChange(event.target.value)}
+                />
+              </label>
+              <label className="field">
+                <span className="field-label">Daily digest hour</span>
+                <select
+                  className="select"
+                  value={digestHour}
+                  onChange={(event) => onDigestHourChange(event.target.value)}
+                >
+                  {Array.from({ length: 24 }, (_, hour) => (
+                    <option key={hour} value={String(hour)}>
+                      {hour === 0
+                        ? "12:00 AM"
+                        : hour < 12
+                          ? `${hour}:00 AM`
+                          : hour === 12
+                            ? "12:00 PM"
+                            : `${hour - 12}:00 PM`}
+                    </option>
+                  ))}
+                </select>
+                <span className="helper-text">
+                  Digests are queued for this hour but only sent out
+                  during our twice-daily processing windows, so
+                  delivery can lag by up to several hours.
+                </span>
+              </label>
+              <label className="field">
+                <span className="field-label">Slack scope</span>
+                <select
+                  className="select"
+                  value={notifyHighRiskOnly ? "high-risk" : "all"}
+                  onChange={(event) =>
+                    onNotifyHighRiskOnlyChange(event.target.value === "high-risk")
+                  }
+                >
+                  <option value="high-risk">High-risk exceptions only</option>
+                  <option value="all">All exception notifications</option>
+                </select>
+              </label>
+            </div>
+            <div className="rule-grid">
+              {(settings?.slackRules ?? []).map((rule) => (
+                <label className="toggle-card" key={rule.triggerType} aria-label={rule.label}>
+                  <input
+                    type="checkbox"
+                    checked={
+                      slackRuleState[rule.triggerType] ?? rule.active
+                    }
+                    onChange={(event) =>
+                      onSlackRuleToggle(rule.triggerType, event.target.checked)
+                    }
+                  />
+                  <div className="stack tight">
+                    <strong>{rule.label}</strong>
+                    <span className="microcopy">
+                      {slackRuleDescription(rule.triggerType)}
+                    </span>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <div className="split-inline">
+              <span className="microcopy">
+                {settings?.slackConfigured
+                  ? "Slack destination is already configured for this store."
+                  : "No Slack destination configured yet."}{" "}
+                Digest jobs are scheduled against the store&apos;s configured digest hour, and the worker still delivers them.
+              </span>
+              <div className="stack-form">
+                <button
+                  className="button-secondary"
+                  type="button"
+                  onClick={onSendSlackTest}
+                  disabled={isSaving}
+                >
+                  Send Slack test
+                </button>
+                <button
+                  className="button-secondary"
+                  type="button"
+                  onClick={onQueueDailyDigest}
+                  disabled={isSaving}
+                >
+                  Queue digest now
+                </button>
+                <button
+                  className="button"
+                  type="button"
+                  onClick={onSaveSlackSettings}
+                  disabled={isSaving}
+                >
+                  Save Slack settings
+                </button>
+                {settings?.slackConfigured ? (
+                  <button
+                    className="button-secondary"
+                    type="button"
+                    onClick={onClearSlackWebhook}
+                    disabled={isSaving}
+                  >
+                    Remove webhook
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </>
   );

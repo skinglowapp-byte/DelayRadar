@@ -701,7 +701,10 @@ export function ReturnSenseApp({
                 senderName: senderName.trim(),
                 senderEmail: senderEmail.trim(),
                 replyToEmail: replyToEmail.trim(),
-                digestEmailEnabled,
+                // A plan without the digest always saves it as off, so a
+                // downgraded shop can still save its sender settings.
+                digestEmailEnabled:
+                  digestEmailEnabled && (data?.plan.dailyDigest ?? true),
                 digestEmailRecipient: digestEmailRecipient.trim(),
                 emailDigestHour: Number(emailDigestHour),
               }),
@@ -1127,6 +1130,7 @@ export function ReturnSenseApp({
 
                   {activeTab === "exceptions" ? (
                     <ExceptionsTab
+                      plan={data?.plan ?? null}
                       filteredExceptions={filteredExceptions}
                       triageFilter={triageFilter}
                       onTriageFilterChange={setTriageFilter}
@@ -1155,6 +1159,7 @@ export function ReturnSenseApp({
 
                   {activeTab === "templates" ? (
                     <TemplatesTab
+                      plan={data?.plan ?? null}
                       templates={data?.templates ?? []}
                       hasEmailProvider={data?.settings.hasEmailProvider ?? false}
                       shopEmail={data?.shop?.email ?? ""}
@@ -1176,6 +1181,7 @@ export function ReturnSenseApp({
 
                   {activeTab === "reports" ? (
                     <ReportsTab
+                      plan={data?.plan ?? null}
                       carrierReport={data?.carrierReport ?? []}
                       carrierLaneInsights={data?.carrierLaneInsights ?? []}
                     />
@@ -1183,6 +1189,7 @@ export function ReturnSenseApp({
 
                   {activeTab === "settings" ? (
                     <SettingsTab
+                      plan={data?.plan ?? null}
                       health={data?.health ?? null}
                       settings={data?.settings ?? null}
                       isSaving={isSaving}

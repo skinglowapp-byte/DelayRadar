@@ -93,7 +93,7 @@ const pricingPlans = [
     price: "$49",
     period: "/ month",
     note: "7-day free trial · or $490/year",
-    features: ["Everything in Pro", "Up to 2,000 tracked shipments a month", "Custom notification templates", "Workflow automation", "Carrier performance reports"],
+    features: ["Everything in Pro", "Up to 2,000 tracked shipments a month", "Custom notification templates", "Carrier performance reports"],
     cta: "Start free trial",
   },
   {

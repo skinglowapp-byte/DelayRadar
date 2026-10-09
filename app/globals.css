@@ -545,6 +545,25 @@ textarea {
   border: 1px solid rgba(187, 63, 63, 0.18);
 }
 
+.upgrade-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(211, 93, 71, 0.08);
+  border: 1px solid rgba(211, 93, 71, 0.22);
+  color: var(--text);
+}
+
+.upgrade-banner .upgrade-copy {
+  display: grid;
+  gap: 2px;
+  max-width: 640px;
+}
+
 .success-banner {
   padding: 12px 14px;
   border-radius: 14px;

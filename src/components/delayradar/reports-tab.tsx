@@ -1,18 +1,41 @@
 import type {
   CarrierLaneInsight,
   CarrierReportRow,
+  PlanSummary,
 } from "@/src/lib/data/types";
 import { cn } from "@/src/lib/utils";
 
 import { toneClass } from "./helpers";
+import { UpgradeBanner } from "./upgrade-banner";
 
 export function ReportsTab({
+  plan,
   carrierReport,
   carrierLaneInsights,
 }: {
+  plan: PlanSummary | null;
   carrierReport: CarrierReportRow[];
   carrierLaneInsights: CarrierLaneInsight[];
 }) {
+  if (plan && !plan.carrierReports) {
+    return (
+      <>
+        <div className="toolbar">
+          <div>
+            <span className="eyebrow">Lane intelligence</span>
+            <h2 className="section-title">Carrier performance reports</h2>
+          </div>
+        </div>
+        <UpgradeBanner
+          plan={plan}
+          requiredPlan="Business"
+          title="See which carriers and service levels keep failing"
+          body="Exception rates, lost parcels and resolution time by carrier lane, from your last 30 days of shipments."
+        />
+      </>
+    );
+  }
+
   const worst = carrierReport.find((row) => row.exceptionRate > 15);
 
   return (

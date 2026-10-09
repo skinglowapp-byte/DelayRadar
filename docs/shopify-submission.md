@@ -73,10 +73,28 @@ Plans as configured in the Partner Dashboard (Shopify bills these):
 | Business | $49/mo or $490/yr, 7-day trial | 2,000 |
 | Enterprise | $99/mo or $990/yr, 7-day trial | unlimited (1,000,000 ceiling) |
 
-- `PLAN_SHIPMENT_LIMITS` in `src/lib/plans.ts` matches these names
-  case-insensitively (including the old "Enterprice"/"enterpirce" typo).
-  Rename a plan in the dashboard and you must add the new name there too, or
-  the shop falls back to the 500 default.
+- Every limit and feature is defined once in `PLAN_FEATURES` in
+  `src/lib/plans.ts` and enforced in the API routes, the worker and the
+  dashboard loader:
+
+  | Feature | Free | Pro | Business | Enterprise |
+  |---|---|---|---|---|
+  | Tracked shipments / month | 50 | 500 | 2,000 | unlimited |
+  | Carriers | 1 (first tracked) | all | all | all |
+  | Exception types | Delayed, Failed delivery, Lost in transit | all | all | all |
+  | Priority rules (VIP tag, high-value threshold) | defaults only | ✓ | ✓ | ✓ |
+  | Slack alerts | — | ✓ | ✓ | ✓ |
+  | Daily digest (email / Slack) | — | ✓ | ✓ | ✓ |
+  | Custom notification templates | built-in copy | built-in copy | ✓ | ✓ |
+  | Carrier performance reports | — | — | ✓ | ✓ |
+
+- Plan names are matched case-insensitively (display names and handles,
+  including the old "Enterprice"/"enterpirce" typo). The private
+  `shopify-test` plan Shopify's reviewers use maps to Enterprise. No
+  subscription = Free. An unrecognised name = Pro (so a dashboard rename can't
+  lock a paying shop down); add any new plan name to `TIER_BY_PLAN_NAME`.
+- "Workflow automation" was removed from the Business plan: the app has no
+  such feature.
 - The app must not call the Billing API. Prices on the landing page, install
   panel and /terms are display only; keep them in sync by hand.
 

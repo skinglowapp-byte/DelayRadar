@@ -272,7 +272,27 @@ export type CarrierCoverage = {
   hasShipments: boolean;
 };
 
+export type PlanSummary = {
+  tier: "free" | "pro" | "business" | "enterprise";
+  label: string;
+  monthlyShipments: number;
+  multiCarrier: boolean;
+  allExceptionTypes: boolean;
+  priorityRules: boolean;
+  slack: boolean;
+  dailyDigest: boolean;
+  customTemplates: boolean;
+  carrierReports: boolean;
+  // Shopify's Managed Pricing plan picker; null outside a live install.
+  upgradeUrl: string | null;
+  // Open exceptions recorded but outside this plan's exception types.
+  hiddenExceptionCount: number;
+  // Shipments not tracked because their carrier isn't the plan's one carrier.
+  skippedCarrierCount: number;
+};
+
 export type AppBootstrap = {
+  plan: PlanSummary;
   mode: "install" | "demo" | "live";
   prefilledShop: string;
   shop: ShopSummary | null;

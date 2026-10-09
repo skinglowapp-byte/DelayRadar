@@ -1,9 +1,11 @@
-import type { ExceptionRow } from "@/src/lib/data/types";
+import type { ExceptionRow, PlanSummary } from "@/src/lib/data/types";
 import { cn } from "@/src/lib/utils";
 
 import { ExceptionTable } from "./exception-table";
+import { UpgradeBanner } from "./upgrade-banner";
 
 export function ExceptionsTab({
+  plan,
   filteredExceptions,
   triageFilter,
   onTriageFilterChange,
@@ -26,6 +28,7 @@ export function ExceptionsTab({
   onSelectException,
   noMovementThresholdHours,
 }: {
+  plan: PlanSummary | null;
   filteredExceptions: ExceptionRow[];
   triageFilter: string;
   onTriageFilterChange: (value: string) => void;
@@ -58,6 +61,18 @@ export function ExceptionsTab({
           {filteredExceptions.length} matching exceptions
         </span>
       </div>
+      {plan && !plan.allExceptionTypes ? (
+        <UpgradeBanner
+          plan={plan}
+          requiredPlan="Pro"
+          title={
+            plan.hiddenExceptionCount > 0
+              ? `${plan.hiddenExceptionCount} more open exception${plan.hiddenExceptionCount === 1 ? "" : "s"} recorded`
+              : "All exception types"
+          }
+          body="Your plan covers delays, failed deliveries and lost parcels. Address issues, pickup holds, returns to sender and stalled tracking are recorded and appear when you upgrade."
+        />
+      ) : null}
       <div className="triage-row">
         <button
           className={cn(

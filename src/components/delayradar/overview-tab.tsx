@@ -3,6 +3,7 @@ import { cn } from "@/src/lib/utils";
 
 import { ExceptionTable } from "./exception-table";
 import { CarrierCoverageBanner, ShipmentMonitorTable } from "./shipment-monitor";
+import { UpgradeBanner } from "./upgrade-banner";
 
 export function OverviewTab({
   data,
@@ -83,6 +84,14 @@ export function OverviewTab({
       </div>
       {data?.carrierCoverage ? (
         <CarrierCoverageBanner coverage={data.carrierCoverage} />
+      ) : null}
+      {data?.plan && data.plan.skippedCarrierCount > 0 ? (
+        <UpgradeBanner
+          plan={data.plan}
+          requiredPlan="Pro"
+          title={`${data.plan.skippedCarrierCount} shipment${data.plan.skippedCarrierCount === 1 ? "" : "s"} on another carrier not tracked`}
+          body="Your plan tracks one carrier: the first one your store shipped with. Track every carrier you use."
+        />
       ) : null}
       {topLane ? (
         <div className={cn("lane-intel-card", topLane.tone)}>

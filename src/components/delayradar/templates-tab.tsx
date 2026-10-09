@@ -1,4 +1,4 @@
-import type { TemplateRow } from "@/src/lib/data/types";
+import type { PlanSummary, TemplateRow } from "@/src/lib/data/types";
 import { cn, titleize } from "@/src/lib/utils";
 
 import {
@@ -8,8 +8,10 @@ import {
   previewTemplateDraft,
   toneClass,
 } from "./helpers";
+import { UpgradeBanner } from "./upgrade-banner";
 
 export function TemplatesTab({
+  plan,
   templates,
   hasEmailProvider,
   shopEmail,
@@ -23,6 +25,7 @@ export function TemplatesTab({
   onSaveTemplate,
   isSaving,
 }: {
+  plan: PlanSummary | null;
   templates: TemplateRow[];
   hasEmailProvider: boolean;
   shopEmail: string;
@@ -54,6 +57,14 @@ export function TemplatesTab({
             : "Email provider not configured"}
         </span>
       </div>
+      {plan && !plan.customTemplates ? (
+        <UpgradeBanner
+          plan={plan}
+          requiredPlan="Business"
+          title="Custom notification templates"
+          body="Write your own customer emails for each exception. Your plan sends the built-in copy shown here."
+        />
+      ) : null}
       {templateDraft ? (
         <div className="stack">
           <div className="form-grid">
@@ -175,7 +186,7 @@ export function TemplatesTab({
               className="button"
               type="button"
               onClick={onSaveTemplate}
-              disabled={isSaving}
+              disabled={isSaving || (plan ? !plan.customTemplates : false)}
             >
               Save template
             </button>

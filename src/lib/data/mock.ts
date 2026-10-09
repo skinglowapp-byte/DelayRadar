@@ -1,7 +1,18 @@
+import { PLAN_FEATURES } from "@/src/lib/plans";
 import type { AppBootstrap } from "@/src/lib/data/types";
 
 export function getDemoAppData(prefilledShop = ""): AppBootstrap {
   return {
+    // The demo shows every feature: the listing screenshots and walkthrough
+    // are taken from it.
+    plan: {
+      tier: "enterprise",
+      label: "Enterprise",
+      ...PLAN_FEATURES.enterprise,
+      upgradeUrl: null,
+      hiddenExceptionCount: 0,
+      skippedCarrierCount: 0,
+    },
     mode: "demo",
     prefilledShop,
     shop: {
@@ -901,6 +912,14 @@ export function getDemoAppData(prefilledShop = ""): AppBootstrap {
 
 export function getInstallState(prefilledShop = ""): AppBootstrap {
   return {
+    plan: {
+      tier: "free",
+      label: "Free",
+      ...PLAN_FEATURES.free,
+      upgradeUrl: null,
+      hiddenExceptionCount: 0,
+      skippedCarrierCount: 0,
+    },
     mode: "install",
     prefilledShop,
     shop: null,

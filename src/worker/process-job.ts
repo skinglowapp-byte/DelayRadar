@@ -17,10 +17,16 @@ import { renderShipmentTemplate } from "@/src/lib/notifications/shipment-templat
 import { sendSlackMessage } from "@/src/lib/notifications/slack";
 import { startOfLocalDay } from "@/src/lib/digest/schedule";
 import { evaluateShipmentPriority } from "@/src/lib/priority/shipment-priority";
+import { defaultTemplateFor } from "@/src/lib/data/defaults";
 import {
   allowanceWindowStart,
+  CARRIER_NOT_IN_PLAN_REASON,
+  carrierKey,
+  effectivePrioritySettings,
+  isExceptionTypeIncluded,
   monthlyShipmentLimitFor,
   OVER_ALLOWANCE_REASON,
+  planFeaturesFor,
 } from "@/src/lib/plans";
 import { backfillRecentShipments } from "@/src/lib/processors/shopify-fulfillment";
 import { prisma } from "@/src/lib/prisma";
@@ -113,6 +119,36 @@ async function processCreateTrackerJob(jobId: string, shipmentId: string) {
     return;
   }
 
+  // Free tracks a single carrier: the first one the shop ever had tracked.
+  // A shipment whose carrier isn't known yet is let through (EasyPost
+  // detects it), so a Free shop's very first shipment always gets tracked.
+  if (!planFeaturesFor(shipment.shop.planName).multiCarrier) {
+    const shipmentCarrier = carrierKey(shipment.trackingCarrier);
+    const firstTracked = await prisma.shipment.findFirst({
+      where: {
+        shopId: shipment.shopId,
+        trackerCreatedAt: { not: null },
+        trackingCarrier: { not: null },
+      },
+      orderBy: { trackerCreatedAt: "asc" },
+      select: { trackingCarrier: true },
+    });
+    const lockedCarrier = carrierKey(firstTracked?.trackingCarrier);
+
+    if (shipmentCarrier && lockedCarrier && shipmentCarrier !== lockedCarrier) {
+      await prisma.shipment.update({
+        where: { id: shipment.id },
+        data: { trackingSkippedReason: CARRIER_NOT_IN_PLAN_REASON },
+      });
+
+      console.warn(
+        `Shop ${shipment.shop.domain} is on a single-carrier plan ` +
+          `(${firstTracked?.trackingCarrier}); skipped ${shipment.trackingCarrier} shipment ${shipment.id}.`,
+      );
+      return;
+    }
+  }
+
   const tracker = await createEasyPostTracker({
     trackingCode: shipment.trackingNumber,
     carrier: shipment.trackingCarrier,
@@ -153,15 +189,24 @@ async function processNotificationJob(shipmentId: string) {
     return;
   }
 
+  // Plan checks happen here, at send time, so a downgrade takes effect on the
+  // next exception without touching anything the merchant configured.
+  const features = planFeaturesFor(shipment.shop.planName);
+
+  if (!isExceptionTypeIncluded(features, shipment.latestExceptionType)) {
+    return;
+  }
+
   const checkpointAt = checkpointDate(shipment);
+  const prioritySettings = effectivePrioritySettings(features, shipment.shop);
   const priority = evaluateShipmentPriority({
     baseRiskScore: shipment.riskScore,
     orderValueCents: shipment.orderValueCents,
     orderTags: shipment.orderTags,
     shippingMethodLabel: shipment.shippingMethodLabel,
     priorityOrderValueThresholdCents:
-      shipment.shop.priorityOrderValueThresholdCents ?? 15000,
-    vipTagPattern: shipment.shop.vipTagPattern ?? "vip",
+      prioritySettings.priorityOrderValueThresholdCents,
+    vipTagPattern: prioritySettings.vipTagPattern,
     currencyCode: shipment.shop.currencyCode ?? "USD",
   });
 
@@ -201,7 +246,13 @@ async function processNotificationJob(shipmentId: string) {
     });
 
     if (!alreadySent) {
-      const { subject, body } = renderShipmentTemplate(shipment, template);
+      const builtIn = features.customTemplates
+        ? null
+        : defaultTemplateFor(NotificationChannel.EMAIL, template.triggerType);
+      const { subject, body } = renderShipmentTemplate(
+        shipment,
+        builtIn ? { ...template, subject: builtIn.subject, body: builtIn.body } : template,
+      );
 
       try {
         const delivery = await sendEmail({
@@ -267,6 +318,7 @@ async function processNotificationJob(shipmentId: string) {
     ? Math.max(slackRule?.minRiskScore ?? 0, 70)
     : (slackRule?.minRiskScore ?? 0);
   const shouldSendSlack =
+    features.slack &&
     Boolean(shipment.shop.slackDestination?.webhookUrl) &&
     Boolean(slackRule?.active) &&
     priority.effectiveRiskScore >= slackRiskThreshold &&
@@ -444,7 +496,7 @@ async function processDailyDigestJob(input: {
     },
   });
 
-  if (!shop) {
+  if (!shop || !planFeaturesFor(shop.planName).dailyDigest) {
     return;
   }
 

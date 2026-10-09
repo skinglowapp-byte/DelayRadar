@@ -2,6 +2,7 @@ import { NextResponse } from "@/src/lib/next-response";
 import { z } from "zod";
 
 import { prisma } from "@/src/lib/prisma";
+import { planGateResponse } from "@/src/lib/shopify/plan-gate";
 import { requireShopDomain, routeErrorResponse } from "@/src/lib/shopify/route-helpers";
 
 const emailField = z
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
 
     const shop = await prisma.shop.findUnique({
       where: { domain: shopDomain },
-      select: { id: true, senderEmail: true, senderVerified: true },
+      select: { id: true, domain: true, planName: true, senderEmail: true, senderVerified: true },
     });
 
     if (!shop) {
@@ -52,6 +53,15 @@ export async function POST(request: Request) {
         { error: "Connected shop not found." },
         { status: 404 },
       );
+    }
+
+    // Sender identity is on every plan; only switching the daily digest on is
+    // gated. Switching it off is always allowed.
+    if (body.digestEmailEnabled) {
+      const gate = planGateResponse(shop, "dailyDigest");
+      if (gate) {
+        return gate;
+      }
     }
 
     const senderEmail = normalizeEmail(body.senderEmail);

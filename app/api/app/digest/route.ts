@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import { ensureDailyDigestJob } from "@/src/lib/jobs";
 import { prisma } from "@/src/lib/prisma";
+import { planGateResponse } from "@/src/lib/shopify/plan-gate";
 import { requireShopDomain, routeErrorResponse } from "@/src/lib/shopify/route-helpers";
 
 const digestSchema = z.object({
@@ -41,6 +42,11 @@ export async function POST(request: Request) {
         { error: "Connected shop not found." },
         { status: 404 },
       );
+    }
+
+    const gate = planGateResponse(shop, "dailyDigest");
+    if (gate) {
+      return gate;
     }
 
     if (!shop.slackDestination?.webhookUrl) {

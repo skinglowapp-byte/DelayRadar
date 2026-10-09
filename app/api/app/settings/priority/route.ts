@@ -2,6 +2,8 @@ import { NextResponse } from "@/src/lib/next-response";
 import { z } from "zod";
 
 import { prisma } from "@/src/lib/prisma";
+import { effectivePrioritySettings, planFeaturesFor } from "@/src/lib/plans";
+import { planGateResponse } from "@/src/lib/shopify/plan-gate";
 import { requireShopDomain, routeErrorResponse } from "@/src/lib/shopify/route-helpers";
 
 const prioritySettingsSchema = z.object({
@@ -37,11 +39,33 @@ export async function POST(request: Request) {
       );
     }
 
+    // The lost-in-transit window is on every plan; the VIP tag and order-value
+    // rules are Pro+. The Free dashboard shows the defaults, so re-saving them
+    // is allowed (the shared settings form still works) and leaves any values
+    // stored from a paid plan untouched for when the shop upgrades again.
+    const features = planFeaturesFor(shop.planName);
+    const effective = effectivePrioritySettings(features, shop);
+    const changesPriorityRules =
+      body.priorityOrderValueThresholdCents !==
+        effective.priorityOrderValueThresholdCents ||
+      body.vipTagPattern !== effective.vipTagPattern;
+
+    if (changesPriorityRules) {
+      const gate = planGateResponse(shop, "priorityRules");
+      if (gate) {
+        return gate;
+      }
+    }
+
     await prisma.shop.update({
       where: { id: shop.id },
       data: {
-        priorityOrderValueThresholdCents: body.priorityOrderValueThresholdCents,
-        vipTagPattern: body.vipTagPattern,
+        ...(features.priorityRules
+          ? {
+              priorityOrderValueThresholdCents: body.priorityOrderValueThresholdCents,
+              vipTagPattern: body.vipTagPattern,
+            }
+          : {}),
         ...(typeof body.lostInTransitThresholdHours === "number"
           ? { lostInTransitThresholdHours: body.lostInTransitThresholdHours }
           : {}),

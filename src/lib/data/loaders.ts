@@ -1,4 +1,5 @@
 import {
+  type ExceptionType,
   JobStatus,
   JobType,
   NotificationChannel,
@@ -7,6 +8,16 @@ import {
 } from "@prisma/client";
 
 import { getDemoAppData, getInstallState } from "@/src/lib/data/mock";
+import {
+  CARRIER_NOT_IN_PLAN_REASON,
+  effectivePrioritySettings,
+  FREE_EXCEPTION_TYPES,
+  PLAN_LABELS,
+  planFeaturesFor,
+  planTierFor,
+  planUpgradeUrl,
+} from "@/src/lib/plans";
+import { syncShopPlan } from "@/src/lib/shopify/subscription";
 import type {
   AppBootstrap,
   BackfillStatus,
@@ -1066,6 +1077,9 @@ function buildOnboardingChecklist(shop: {
   };
 }
 
+// How old a cached plan can be before opening the dashboard refreshes it.
+const PLAN_REFRESH_ON_OPEN_MS = 5 * 60_000;
+
 export async function getAppBootstrap(
   shopDomain: string | null,
 ): Promise<AppBootstrap> {
@@ -1093,15 +1107,40 @@ export async function getAppBootstrap(
     return getInstallState(shopDomain);
   }
 
+  // Merchants come straight back here from Shopify's plan picker, so refresh
+  // the plan on open rather than waiting for the daily worker sync; otherwise
+  // an upgrade stays locked for up to a day. A failed sync keeps the cached
+  // plan and never blocks the dashboard.
+  let planName = shop.planName;
+  const planIsStale =
+    !shop.planSyncedAt ||
+    Date.now() - shop.planSyncedAt.getTime() > PLAN_REFRESH_ON_OPEN_MS;
+
+  if (shop.isInstalled && shop.offlineAccessToken && planIsStale) {
+    try {
+      await syncShopPlan(shop.id);
+      const refreshed = await prisma.shop.findUnique({
+        where: { id: shop.id },
+        select: { planName: true },
+      });
+      planName = refreshed?.planName ?? null;
+    } catch (error) {
+      console.error(`Plan refresh failed for ${shop.domain}:`, error);
+    }
+  }
+
+  const planTier = planTierFor(planName);
+  const features = planFeaturesFor(planName);
+  const freeExceptionTypes = [...FREE_EXCEPTION_TYPES] as ExceptionType[];
+
   const startOfDay = new Date();
   startOfDay.setUTCHours(0, 0, 0, 0);
   const noMovementThresholdHours =
     shop.noMovementThresholdHours ?? DEFAULT_NO_MOVEMENT_THRESHOLD_HOURS;
   const lostInTransitThresholdHours =
     shop.lostInTransitThresholdHours ?? 168;
-  const priorityOrderValueThresholdCents =
-    shop.priorityOrderValueThresholdCents ?? 15000;
-  const vipTagPattern = shop.vipTagPattern?.trim() || "vip";
+  const { priorityOrderValueThresholdCents, vipTagPattern } =
+    effectivePrioritySettings(features, shop);
   const currencyCode = shop.currencyCode ?? "USD";
   const staleThresholdAt = new Date(
     Date.now() - noMovementThresholdHours * 3600000,
@@ -1153,7 +1192,9 @@ export async function getAppBootstrap(
     prisma.shipment.findMany({
       where: {
         shopId: shop.id,
-        latestExceptionType: { not: null },
+        latestExceptionType: features.allExceptionTypes
+          ? { not: null }
+          : { in: freeExceptionTypes },
         latestStatus: { not: ShipmentStatus.DELIVERED },
       },
       orderBy: [{ riskScore: "desc" }, { updatedAt: "desc" }],
@@ -1176,48 +1217,51 @@ export async function getAppBootstrap(
         },
       },
     }),
-    prisma.shipment.findMany({
-      where: {
-        shopId: shop.id,
-        trackingProviderId: { not: null },
-        latestExceptionType: null,
-        latestStatus: {
-          in: [ShipmentStatus.PENDING, ShipmentStatus.IN_TRANSIT],
+    // "No tracking movement" is a Pro+ exception type.
+    features.allExceptionTypes
+      ? prisma.shipment.findMany({
+        where: {
+          shopId: shop.id,
+          trackingProviderId: { not: null },
+          latestExceptionType: null,
+          latestStatus: {
+            in: [ShipmentStatus.PENDING, ShipmentStatus.IN_TRANSIT],
+          },
+          OR: [
+            {
+              latestCheckpointAt: {
+                lte: staleThresholdAt,
+              },
+            },
+            {
+              latestCheckpointAt: null,
+              updatedAt: {
+                lte: staleThresholdAt,
+              },
+            },
+          ],
         },
-        OR: [
-          {
-            latestCheckpointAt: {
-              lte: staleThresholdAt,
+        orderBy: [{ updatedAt: "asc" }],
+        take: 12,
+        include: {
+          events: {
+            orderBy: { occurredAt: "desc" },
+            take: 5,
+          },
+          notifications: {
+            orderBy: [{ createdAt: "desc" }],
+            take: 5,
+            include: {
+              template: true,
             },
           },
-          {
-            latestCheckpointAt: null,
-            updatedAt: {
-              lte: staleThresholdAt,
-            },
-          },
-        ],
-      },
-      orderBy: [{ updatedAt: "asc" }],
-      take: 12,
-      include: {
-        events: {
-          orderBy: { occurredAt: "desc" },
-          take: 5,
-        },
-        notifications: {
-          orderBy: [{ createdAt: "desc" }],
-          take: 5,
-          include: {
-            template: true,
+          notes: {
+            orderBy: { createdAt: "desc" },
+            take: 10,
           },
         },
-        notes: {
-          orderBy: { createdAt: "desc" },
-          take: 10,
-        },
-      },
-    }),
+      })
+      : Promise.resolve([]),
     prisma.shipment.findMany({
       where: {
         shopId: shop.id,
@@ -1418,16 +1462,40 @@ export async function getAppBootstrap(
     health,
     backfill,
     carrierCoverage,
+    hiddenExceptionCount,
+    skippedCarrierCount,
   ] = await Promise.all([
-    buildCarrierReport(shop.id),
-    buildCarrierLaneInsights(shop.id, {
-      priorityOrderValueThresholdCents,
-      vipTagPattern,
-      currencyCode,
-    }),
+    // Carrier performance reports are Business+: the data isn't sent at all
+    // below that, rather than only hidden in the UI.
+    features.carrierReports ? buildCarrierReport(shop.id) : Promise.resolve([]),
+    features.carrierReports
+      ? buildCarrierLaneInsights(shop.id, {
+          priorityOrderValueThresholdCents,
+          vipTagPattern,
+          currencyCode,
+        })
+      : Promise.resolve([]),
     buildSyncHealth(shop.id, shop.lastSyncedAt),
     buildBackfillStatus(shop.id, shop.lastSyncedAt, trackedShipments),
     buildCarrierCoverage(shop.id),
+    features.allExceptionTypes
+      ? Promise.resolve(0)
+      : prisma.shipment.count({
+          where: {
+            shopId: shop.id,
+            latestExceptionType: { notIn: freeExceptionTypes },
+            NOT: { latestExceptionType: null },
+            latestStatus: { not: ShipmentStatus.DELIVERED },
+          },
+        }),
+    features.multiCarrier
+      ? Promise.resolve(0)
+      : prisma.shipment.count({
+          where: {
+            shopId: shop.id,
+            trackingSkippedReason: CARRIER_NOT_IN_PLAN_REASON,
+          },
+        }),
   ]);
 
   const onboarding = buildOnboardingChecklist(shop, {
@@ -1437,6 +1505,14 @@ export async function getAppBootstrap(
   });
 
   return {
+    plan: {
+      tier: planTier,
+      label: PLAN_LABELS[planTier],
+      ...features,
+      upgradeUrl: planUpgradeUrl(shop.domain),
+      hiddenExceptionCount,
+      skippedCarrierCount,
+    },
     mode: "live",
     prefilledShop: shop.domain,
     shop: {

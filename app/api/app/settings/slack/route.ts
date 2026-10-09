@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import { managedSlackRuleTypes } from "@/src/lib/notifications/managed-slack-rules";
 import { prisma } from "@/src/lib/prisma";
+import { planGateResponse } from "@/src/lib/shopify/plan-gate";
 import { requireShopDomain, routeErrorResponse } from "@/src/lib/shopify/route-helpers";
 
 const slackSchema = z.object({
@@ -52,6 +53,15 @@ export async function POST(request: Request) {
         { error: "Connected shop not found." },
         { status: 404 },
       );
+    }
+
+    // Disconnecting stays allowed on every plan, so a downgraded shop can
+    // still remove a webhook it set up while on a paid plan.
+    if (!body.clearWebhook) {
+      const gate = planGateResponse(shop, "slack");
+      if (gate) {
+        return gate;
+      }
     }
 
     await prisma.$transaction(async (tx) => {

@@ -54,6 +54,21 @@ const defaultTemplates: DefaultTemplate[] = [
   },
 ];
 
+// The built-in copy for a trigger. Shops whose plan doesn't include custom
+// templates are always sent this, even if they edited the template on a paid
+// plan before downgrading (the edit is kept for when they upgrade again).
+export function defaultTemplateFor(
+  channel: NotificationChannel,
+  triggerType: ExceptionType | string,
+): DefaultTemplate | null {
+  return (
+    defaultTemplates.find(
+      (template) =>
+        template.channel === channel && template.triggerType === triggerType,
+    ) ?? null
+  );
+}
+
 export async function ensureDefaultAutomation(shopId: string) {
   if (!prisma) {
     return;

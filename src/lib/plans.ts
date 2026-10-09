@@ -6,32 +6,174 @@
 // The allowance is enforced where the tracker is registered — see
 // src/worker/process-job.ts.
 //
-// Keys are the plan names configured in the Shopify Partner Dashboard under
-// Managed Pricing (Free Plan / Pro $19 / Business $49 / Enterprise $99), which
-// is where Shopify owns the prices. Names are matched case-insensitively, and
-// the dashboard's misspelt "Enterprice" display name and "enterpirce" handle
-// are mapped too, so a typo fix there can't silently drop a shop to the default.
-// A shop on a plan that isn't listed here (or on no plan at all) falls back to
-// the default.
+// Plans as configured in the Shopify Partner Dashboard under Managed Pricing,
+// which is where Shopify owns the prices. Every limit and feature gate in the
+// app reads from PLAN_FEATURES, so the listing, the worker, the API routes and
+// the dashboard can't drift from each other.
+export type PlanTier = "free" | "pro" | "business" | "enterprise";
+
+export type PlanFeatures = {
+  monthlyShipments: number;
+  // Free tracks one carrier (the first one the shop ships with).
+  multiCarrier: boolean;
+  // Free sees and is alerted about FREE_EXCEPTION_TYPES only.
+  allExceptionTypes: boolean;
+  // VIP tag and order-value priority rules are configurable (Free uses defaults).
+  priorityRules: boolean;
+  slack: boolean;
+  dailyDigest: boolean;
+  customTemplates: boolean;
+  carrierReports: boolean;
+};
 
 // "Unlimited" on the listing; a finite ceiling still guards against a runaway
 // tracking bill from a single misbehaving install.
 export const ENTERPRISE_SHIPMENT_LIMIT = 1_000_000;
 
-export const PLAN_SHIPMENT_LIMITS: Record<string, number> = {
-  "free plan": 50,
-  free: 50,
-  pro: 500,
-  business: 2_000,
-  enterprise: ENTERPRISE_SHIPMENT_LIMIT,
-  enterprice: ENTERPRISE_SHIPMENT_LIMIT,
-  enterpirce: ENTERPRISE_SHIPMENT_LIMIT,
+export const PLAN_FEATURES: Record<PlanTier, PlanFeatures> = {
+  free: {
+    monthlyShipments: 50,
+    multiCarrier: false,
+    allExceptionTypes: false,
+    priorityRules: false,
+    slack: false,
+    dailyDigest: false,
+    customTemplates: false,
+    carrierReports: false,
+  },
+  pro: {
+    monthlyShipments: 500,
+    multiCarrier: true,
+    allExceptionTypes: true,
+    priorityRules: true,
+    slack: true,
+    dailyDigest: true,
+    customTemplates: false,
+    carrierReports: false,
+  },
+  business: {
+    monthlyShipments: 2_000,
+    multiCarrier: true,
+    allExceptionTypes: true,
+    priorityRules: true,
+    slack: true,
+    dailyDigest: true,
+    customTemplates: true,
+    carrierReports: true,
+  },
+  enterprise: {
+    monthlyShipments: ENTERPRISE_SHIPMENT_LIMIT,
+    multiCarrier: true,
+    allExceptionTypes: true,
+    priorityRules: true,
+    slack: true,
+    dailyDigest: true,
+    customTemplates: true,
+    carrierReports: true,
+  },
 };
 
-// Deliberately conservative: an unrecognized plan name means the Partner
-// Dashboard and this file have drifted, and under-serving one shop is far
-// cheaper to correct than an unbounded tracking bill.
-export const DEFAULT_MONTHLY_SHIPMENT_LIMIT = 500;
+export const PLAN_LABELS: Record<PlanTier, string> = {
+  free: "Free",
+  pro: "Pro",
+  business: "Business",
+  enterprise: "Enterprise",
+};
+
+// Exception types a Free shop sees and is notified about. Every type is still
+// recorded, so upgrading reveals the full history.
+export const FREE_EXCEPTION_TYPES = [
+  "DELAYED",
+  "FAILED_DELIVERY",
+  "LOST_IN_TRANSIT",
+] as const;
+
+// Matched case-insensitively against the subscription name Shopify returns.
+// Both display names and plan handles are listed, including the dashboard's
+// old "Enterprice"/"enterpirce" typo, so a rename there can't silently drop a
+// paying shop to Free. "shopify-test" is the private $0 plan Shopify's app
+// reviewers install with; they need to see every feature.
+const TIER_BY_PLAN_NAME: Record<string, PlanTier> = {
+  "free plan": "free",
+  "free-plan": "free",
+  free: "free",
+  pro: "pro",
+  business: "business",
+  enterprise: "enterprise",
+  enterprice: "enterprise",
+  enterpirce: "enterprise",
+  "shopify-test": "enterprise",
+};
+
+// A shop with no active subscription is on Free: the $0 plan may not surface
+// as a subscription at all. An unrecognised, non-empty name means the Partner
+// Dashboard and this file have drifted; that shop is paying for *something*,
+// so it gets Pro rather than being locked down to Free.
+const UNRECOGNISED_PLAN_TIER: PlanTier = "pro";
+
+export function planTierFor(planName: string | null | undefined): PlanTier {
+  const key = planName?.trim().toLowerCase();
+
+  if (!key) {
+    return "free";
+  }
+
+  return TIER_BY_PLAN_NAME[key] ?? UNRECOGNISED_PLAN_TIER;
+}
+
+export function planFeaturesFor(planName: string | null | undefined): PlanFeatures {
+  return PLAN_FEATURES[planTierFor(planName)];
+}
+
+export function isExceptionTypeIncluded(
+  features: PlanFeatures,
+  exceptionType: string | null | undefined,
+): boolean {
+  if (!exceptionType) {
+    return false;
+  }
+
+  return (
+    features.allExceptionTypes ||
+    (FREE_EXCEPTION_TYPES as readonly string[]).includes(exceptionType)
+  );
+}
+
+// Defaults a shop on a plan without priority rules is held to, whatever is
+// stored (stored values are kept so an upgrade restores them).
+export const DEFAULT_PRIORITY_ORDER_VALUE_CENTS = 15_000;
+export const DEFAULT_VIP_TAG_PATTERN = "vip";
+
+export function effectivePrioritySettings(
+  features: PlanFeatures,
+  shop: { priorityOrderValueThresholdCents: number | null; vipTagPattern: string | null },
+) {
+  if (!features.priorityRules) {
+    return {
+      priorityOrderValueThresholdCents: DEFAULT_PRIORITY_ORDER_VALUE_CENTS,
+      vipTagPattern: DEFAULT_VIP_TAG_PATTERN,
+    };
+  }
+
+  return {
+    priorityOrderValueThresholdCents:
+      shop.priorityOrderValueThresholdCents ?? DEFAULT_PRIORITY_ORDER_VALUE_CENTS,
+    vipTagPattern: shop.vipTagPattern?.trim() || DEFAULT_VIP_TAG_PATTERN,
+  };
+}
+
+// Normalises a carrier label so "USPS", "usps " and "Usps" lock to one carrier.
+export function carrierKey(carrier: string | null | undefined): string | null {
+  const key = carrier?.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  return key || null;
+}
+
+export const PLAN_SHIPMENT_LIMITS: Record<PlanTier, number> = {
+  free: PLAN_FEATURES.free.monthlyShipments,
+  pro: PLAN_FEATURES.pro.monthlyShipments,
+  business: PLAN_FEATURES.business.monthlyShipments,
+  enterprise: PLAN_FEATURES.enterprise.monthlyShipments,
+};
 
 export type ShopPlanFields = {
   planName: string | null;
@@ -45,12 +187,7 @@ export function monthlyShipmentLimitFor(shop: ShopPlanFields): number {
     return shop.monthlyShipmentLimit;
   }
 
-  const planKey = shop.planName?.trim().toLowerCase();
-  if (planKey && planKey in PLAN_SHIPMENT_LIMITS) {
-    return PLAN_SHIPMENT_LIMITS[planKey];
-  }
-
-  return DEFAULT_MONTHLY_SHIPMENT_LIMIT;
+  return planFeaturesFor(shop.planName).monthlyShipments;
 }
 
 // Allowances reset on the first of the calendar month in UTC. This is not the
@@ -63,3 +200,10 @@ export function allowanceWindowStart(now: Date = new Date()): Date {
 }
 
 export const OVER_ALLOWANCE_REASON = "MONTHLY_SHIPMENT_LIMIT_REACHED";
+export const CARRIER_NOT_IN_PLAN_REASON = "CARRIER_NOT_IN_PLAN";
+
+// Builds the Shopify-hosted plan picker URL for Managed Pricing.
+export function planUpgradeUrl(shopDomain: string): string {
+  const storeHandle = shopDomain.replace(/\.myshopify\.com$/, "");
+  return `https://admin.shopify.com/store/${storeHandle}/charges/delayradar/pricing_plans`;
+}
