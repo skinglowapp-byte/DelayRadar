@@ -75,7 +75,7 @@ Retake under the ReturnSense name (the March set shows DelayRadar). Use /demo:
 ### Resources
 - Privacy policy: `https://www.returnsenseapp.com/privacy`
 - Support / FAQ: `https://www.returnsenseapp.com/support`
-- Support email: `support@returnsenseapp.com` (must actually receive mail)
+- Support email: `support@delayradar.io` for now; switch to `support@returnsenseapp.com` once that mailbox exists in Hostinger
 
 ### Category & search terms
 - Primary category: **Orders and shipping** → Order tracking

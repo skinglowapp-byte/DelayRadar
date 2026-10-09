@@ -34,7 +34,7 @@ export default function SupportRoute() {
       <h2>Email Support</h2>
       <p>
         Send us an email at{" "}
-        <a href="mailto:support@returnsenseapp.com">support@returnsenseapp.com</a> and
+        <a href="mailto:support@delayradar.io">support@delayradar.io</a> and
         we&apos;ll respond within one business day.
       </p>
       <p>When contacting support, please include:</p>

@@ -366,7 +366,7 @@ export function MarketingLanding() {
           <a href="/privacy">Privacy</a>
           <a href="/terms">Terms</a>
           <a href="/support">Support</a>
-          <a href="mailto:support@returnsenseapp.com">support@returnsenseapp.com</a>
+          <a href="mailto:support@delayradar.io">support@delayradar.io</a>
         </nav>
         <span className="lp-footer-fine">
           © 2026 Saleh &amp; Associates LLC. ReturnSense is a post-purchase
