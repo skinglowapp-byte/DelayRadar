@@ -16,7 +16,7 @@ import { withRevocationHandling } from "./revocation";
 // forbidden from calling the Billing API. Reading the installation's active
 // subscription is how we learn which plan a merchant actually chose.
 const ACTIVE_SUBSCRIPTION_QUERY = `
-  query DelayRadarActiveSubscription {
+  query ReturnSenseActiveSubscription {
     currentAppInstallation {
       activeSubscriptions {
         name

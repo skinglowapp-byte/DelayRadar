@@ -302,7 +302,7 @@ export async function backfillRecentShipments(shopId: string) {
   const accessToken = decrypt(shop.offlineAccessToken);
 
   const query = `#graphql
-      query DelayRadarBackfillOrders($cursor: String) {
+      query ReturnSenseBackfillOrders($cursor: String) {
         orders(first: 50, after: $cursor, reverse: true, sortKey: CREATED_AT, query: "fulfillment_status:fulfilled OR fulfillment_status:partial") {
           pageInfo {
             hasNextPage
