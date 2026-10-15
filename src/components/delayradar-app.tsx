@@ -53,6 +53,11 @@ const tabs: Array<{ id: TabKey; label: string }> = [
   { id: "settings", label: "Settings" },
 ];
 
+const HERO_TITLE =
+  "Unite delivery recovery and returns prevention in one Shopify ops app.";
+const HERO_COPY =
+  "ReturnSense combines delivery-intelligence with returns-aware workflows. It watches fulfilments, surfaces carrier and exception risk, prevents avoidable WISMO tickets, and shows when a shipment should become a resend, exchange, or refund decision.";
+
 export function ReturnSenseApp({
   initialShop,
   initialHost,
@@ -979,14 +984,35 @@ export function ReturnSenseApp({
         : "Install";
 
   if (!data && !error) {
+    // Same header and grid as the loaded dashboard, so the headline paints
+    // before the bootstrap request returns (it is the page's largest element)
+    // and the data swaps into reserved boxes instead of shoving the layout.
     return (
-      <main className="page-shell">
+      <main className="page-shell" aria-busy="true">
         <div className="app-frame">
-          <section className="hero-panel" style={{ textAlign: "center", padding: "4rem 1rem" }}>
-            <span className="badge hot">ReturnSense</span>
-            <p className="hero-copy" style={{ marginTop: "1rem" }}>
-              Loading your store data...
-            </p>
+          <section className="hero-panel">
+            <div className="hero-topline">
+              <span className="badge hot">ReturnSense</span>
+              <span className="badge">Loading your store data…</span>
+            </div>
+            <div>
+              <h1 className="hero-title">{HERO_TITLE}</h1>
+              <p className="hero-copy">{HERO_COPY}</p>
+            </div>
+            <div className="hero-grid">
+              <div className="stat-grid">
+                {Array.from({ length: 5 }, (_, index) => (
+                  <div key={index} className="metric-card">
+                    <span className="metric-label">&nbsp;</span>
+                    <span className="metric-value">—</span>
+                    <span className="metric-footnote">&nbsp;</span>
+                  </div>
+                ))}
+              </div>
+              <div className="surface-panel stack">
+                <span className="eyebrow">Store health</span>
+              </div>
+            </div>
           </section>
         </div>
       </main>
@@ -1035,16 +1061,8 @@ export function ReturnSenseApp({
           </div>
 
           <div>
-            <h1 className="hero-title">
-              Unite delivery recovery and returns prevention in one Shopify ops app.
-            </h1>
-            <p className="hero-copy">
-              ReturnSense combines delivery-intelligence with returns-aware
-              workflows. It watches fulfilments, surfaces
-              carrier and exception risk, prevents avoidable WISMO tickets, and
-              shows when a shipment should become a resend, exchange, or refund
-              decision.
-            </p>
+            <h1 className="hero-title">{HERO_TITLE}</h1>
+            <p className="hero-copy">{HERO_COPY}</p>
           </div>
 
           <div ref={feedbackRef}>
