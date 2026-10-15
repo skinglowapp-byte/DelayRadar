@@ -1,5 +1,5 @@
 export type EmailDeliveryResult = {
-  provider: "postmark" | "sendgrid" | "none";
+  provider: "resend" | "postmark" | "sendgrid" | "none";
   status: "sent" | "skipped";
   externalMessageId?: string;
 };
@@ -37,6 +37,14 @@ function resolveFrom(
   return null;
 }
 
+export function hasEmailProvider() {
+  return Boolean(
+    process.env.RESEND_API_KEY ||
+      process.env.POSTMARK_SERVER_TOKEN ||
+      process.env.SENDGRID_API_KEY,
+  );
+}
+
 export async function sendEmail(input: {
   to: string;
   subject: string;
@@ -44,9 +52,45 @@ export async function sendEmail(input: {
   textBody: string;
   sender?: EmailSender;
 }) {
+  const resendKey = process.env.RESEND_API_KEY;
   const postmarkToken = process.env.POSTMARK_SERVER_TOKEN;
   const sendgridKey = process.env.SENDGRID_API_KEY;
   const replyTo = input.sender?.replyTo?.trim() || undefined;
+
+  if (resendKey) {
+    const from = resolveFrom(process.env.RESEND_FROM_EMAIL, input.sender);
+    if (!from) {
+      throw new Error("RESEND_FROM_EMAIL is not set.");
+    }
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: formatFrom(from.email, from.name),
+        to: [input.to],
+        ...(replyTo ? { reply_to: replyTo } : {}),
+        subject: input.subject,
+        html: input.htmlBody,
+        text: input.textBody,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Resend send failed with ${response.status}`);
+    }
+
+    const payload = (await response.json()) as { id?: string };
+
+    return {
+      provider: "resend",
+      status: "sent",
+      externalMessageId: payload.id,
+    } satisfies EmailDeliveryResult;
+  }
 
   if (postmarkToken) {
     const from = resolveFrom(process.env.POSTMARK_FROM_EMAIL, input.sender);

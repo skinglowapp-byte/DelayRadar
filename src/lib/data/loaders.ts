@@ -52,12 +52,7 @@ import {
   noMovementRiskScore,
 } from "@/src/lib/shipment-helpers";
 import { formatCurrency, formatRelativeTime, titleize } from "@/src/lib/utils";
-
-function hasEmailProvider() {
-  return Boolean(
-    process.env.POSTMARK_SERVER_TOKEN || process.env.SENDGRID_API_KEY,
-  );
-}
+import { hasEmailProvider } from "@/src/lib/notifications/email";
 
 function toSeverity(riskScore: number): "good" | "warn" | "bad" {
   if (riskScore >= 75) {

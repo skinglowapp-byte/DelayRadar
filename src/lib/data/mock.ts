@@ -1,4 +1,5 @@
 import { PLAN_FEATURES } from "@/src/lib/plans";
+import { hasEmailProvider } from "@/src/lib/notifications/email";
 import type { AppBootstrap } from "@/src/lib/data/types";
 
 export function getDemoAppData(prefilledShop = ""): AppBootstrap {
@@ -1021,9 +1022,7 @@ export function getInstallState(prefilledShop = ""): AppBootstrap {
       klaviyoLastError: null,
       digestHour: 9,
       notifyHighRiskOnly: true,
-      hasEmailProvider: Boolean(
-        process.env.POSTMARK_SERVER_TOKEN || process.env.SENDGRID_API_KEY,
-      ),
+      hasEmailProvider: hasEmailProvider(),
       noMovementThresholdHours: 72,
       lostInTransitThresholdHours: 168,
       priorityOrderValueThresholdCents: 15000,
