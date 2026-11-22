@@ -1,6 +1,5 @@
 import { JobStatus, JobType } from "@prisma/client";
 
-import { decrypt } from "@/src/lib/crypto";
 import { enqueueJob } from "@/src/lib/jobs";
 import {
   CARRIER_NOT_IN_PLAN_REASON,
@@ -10,6 +9,7 @@ import {
 import { prisma } from "@/src/lib/prisma";
 
 import { shopifyAdminGraphql } from "./admin";
+import { withShopifyAccessToken } from "./offline-token";
 import { withRevocationHandling } from "./revocation";
 
 // Under Managed Pricing, Shopify owns the plans and the checkout; the app is
@@ -71,12 +71,11 @@ export async function syncShopPlan(shopId: string): Promise<string | null> {
     return null;
   }
 
-  // Tokens are stored encrypted at rest (see src/lib/shopify/oauth.ts).
+  // Offline tokens expire after about an hour; the helper refreshes them.
   const result = await withRevocationHandling(shop.id, () =>
-    fetchActivePlanName({
-      shop: shop.domain,
-      accessToken: decrypt(shop.offlineAccessToken!),
-    }),
+    withShopifyAccessToken(shop.domain, (accessToken) =>
+      fetchActivePlanName({ shop: shop.domain, accessToken }),
+    ),
   );
 
   if (!result.ok) {

@@ -7,10 +7,10 @@ import {
 } from "@prisma/client";
 import { z } from "zod";
 
-import { decrypt } from "@/src/lib/crypto";
 import { enqueueJob } from "@/src/lib/jobs";
 import { prisma } from "@/src/lib/prisma";
 import { shopifyAdminGraphql } from "@/src/lib/shopify/admin";
+import { withShopifyAccessToken } from "@/src/lib/shopify/offline-token";
 
 // Shopify webhooks send bare numeric IDs while the Admin GraphQL API sends
 // GIDs (gid://shopify/Order/123). Normalize both to the numeric string so the
@@ -299,7 +299,6 @@ export async function backfillRecentShipments(shopId: string) {
     throw new Error("Shop is missing an offline access token.");
   }
 
-  const accessToken = decrypt(shop.offlineAccessToken);
 
   const query = `#graphql
       query ReturnSenseBackfillOrders($cursor: String) {
@@ -356,13 +355,18 @@ export async function backfillRecentShipments(shopId: string) {
   const MAX_PAGES = 20;
 
   do {
-    const data: BackfillOrdersResponse =
-      await shopifyAdminGraphql<BackfillOrdersResponse>({
-        shop: shop.domain,
-        accessToken,
-        query,
-        variables: { cursor },
-      });
+    // Fetched per page: a long backfill can outlive a token that was close to
+    // expiry when it started.
+    const data: BackfillOrdersResponse = await withShopifyAccessToken(
+      shop.domain,
+      (accessToken) =>
+        shopifyAdminGraphql<BackfillOrdersResponse>({
+          shop: shop.domain,
+          accessToken,
+          query,
+          variables: { cursor },
+        }),
+    );
 
     for (const edge of data.orders.edges) {
       if (
