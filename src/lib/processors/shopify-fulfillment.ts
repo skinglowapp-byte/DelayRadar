@@ -267,10 +267,14 @@ type BackfillOrdersResponse = {
             };
           }>;
         };
-        customer: {
+        // Order-level contact fields: these need only read_orders (plus
+        // protected customer data access). `customer` needs read_customers,
+        // which the app doesn't request, and fails the whole query.
+        email: string | null;
+        phone: string | null;
+        shippingAddress: {
           firstName: string | null;
           lastName: string | null;
-          email: string | null;
           phone: string | null;
         } | null;
         fulfillments: Array<{
@@ -326,10 +330,11 @@ export async function backfillRecentShipments(shopId: string) {
                   }
                 }
               }
-              customer {
+              email
+              phone
+              shippingAddress {
                 firstName
                 lastName
-                email
                 phone
               }
               fulfillments(first: 10) {
@@ -388,10 +393,16 @@ export async function backfillRecentShipments(shopId: string) {
           .map((trackingInfo) => ({ fulfillment, trackingInfo })),
       );
 
+      // Same sources the fulfillment webhook path uses (order email/phone,
+      // shipping destination for the name).
       const customerName =
-        [edge.node.customer?.firstName, edge.node.customer?.lastName]
+        [edge.node.shippingAddress?.firstName, edge.node.shippingAddress?.lastName]
+          .map((part) => part?.trim())
           .filter(Boolean)
           .join(" ") || null;
+      const customerEmail = edge.node.email ?? null;
+      const customerPhone =
+        edge.node.phone ?? edge.node.shippingAddress?.phone ?? null;
       const shippingMethodLabel =
         edge.node.shippingLines.edges
           .map((shippingLine) => shippingLine.node.title?.trim())
@@ -411,8 +422,8 @@ export async function backfillRecentShipments(shopId: string) {
             shopifyFulfillmentId: toNumericId(fulfillment.id),
             trackingCarrier: trackingInfo.company ?? undefined,
             customerName: customerName ?? undefined,
-            customerEmail: edge.node.customer?.email ?? undefined,
-            customerPhone: edge.node.customer?.phone ?? undefined,
+            customerEmail: customerEmail ?? undefined,
+            customerPhone: customerPhone ?? undefined,
             orderCreatedAt: new Date(edge.node.createdAt),
             orderValueCents:
               parseMoneyToCents(
@@ -430,8 +441,8 @@ export async function backfillRecentShipments(shopId: string) {
             trackingCarrier: trackingInfo.company,
             trackingProvider: TrackingProvider.EASYPOST,
             customerName,
-            customerEmail: edge.node.customer?.email ?? null,
-            customerPhone: edge.node.customer?.phone ?? null,
+            customerEmail,
+            customerPhone,
             orderCreatedAt: new Date(edge.node.createdAt),
             orderValueCents: parseMoneyToCents(
               edge.node.currentTotalPriceSet?.shopMoney.amount,
