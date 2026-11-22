@@ -69,6 +69,11 @@ export function defaultTemplateFor(
   );
 }
 
+// Creates any default templates and rules a shop is missing. It never changes
+// existing rows: this runs from afterAuth, which fires on every install and on
+// every token exchange (each time the merchant opens the app after the offline
+// token expired), so updating here would re-enable rules the merchant turned
+// off and overwrite their custom templates.
 export async function ensureDefaultAutomation(shopId: string) {
   if (!prisma) {
     return;
@@ -86,12 +91,7 @@ export async function ensureDefaultAutomation(shopId: string) {
             triggerType: template.triggerType,
           },
         },
-        update: {
-          name: template.name,
-          subject: template.subject,
-          body: template.body,
-          active: true,
-        },
+        update: {},
         create: {
           shopId,
           ...template,
@@ -112,10 +112,7 @@ export async function ensureDefaultAutomation(shopId: string) {
             channel: template.channel,
           },
         },
-        update: {
-          active: true,
-          templateId: templateIds.get(`${template.channel}:${template.triggerType}`),
-        },
+        update: {},
         create: {
           shopId,
           exceptionType: template.triggerType,
@@ -136,11 +133,7 @@ export async function ensureDefaultAutomation(shopId: string) {
             channel: NotificationChannel.SLACK,
           },
         },
-        update: {
-          active: true,
-          minRiskScore: 70,
-          onlyWhenActionRequired: true,
-        },
+        update: {},
         create: {
           shopId,
           exceptionType: rule.triggerType,
